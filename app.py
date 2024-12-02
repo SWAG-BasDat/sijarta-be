@@ -17,12 +17,18 @@ DB_CONFIG = {
 def get_db_connection():
     return psycopg2.connect(**DB_CONFIG)
 
+@app.route('/')
+def home():
+    return jsonify({
+        'message': 'Welcome to Sijarta API',
+        'status': 'running'
+    })
+
 @app.route('/test-connection')
 def test_connection():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        # Test doang yak
         cur.execute('SELECT version();')
         db_version = cur.fetchone()
         cur.close()
