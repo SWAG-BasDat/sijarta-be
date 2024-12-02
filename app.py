@@ -6,16 +6,12 @@ from flask import Flask, jsonify
 load_dotenv()
 app = Flask(__name__)
 
-DB_CONFIG = {
-    'dbname': os.getenv('DB_NAME'),
-    'user': os.getenv('DB_USER'),
-    'password': os.getenv('DB_PASSWORD'),
-    'host': os.getenv('DB_HOST'),
-    'port': os.getenv('DB_PORT')
-}
+DATABASE_URL = os.getenv('DATABASE_PUBLIC_URL')
 
-def get_db_connection():
-    return psycopg2.connect(**DB_CONFIG)
+
+def get_connection():
+    conn = psycopg2.connect(DATABASE_URL)
+    return conn
 
 @app.route('/')
 def home():
@@ -27,7 +23,7 @@ def home():
 @app.route('/test-connection')
 def test_connection():
     try:
-        conn = get_db_connection()
+        conn = get_connection()
         cur = conn.cursor()
         cur.execute('SELECT version();')
         db_version = cur.fetchone()
