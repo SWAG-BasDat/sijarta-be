@@ -4,6 +4,8 @@ import psycopg2
 from flask import Flask, jsonify
 from services.voucher_service import VoucherService
 from services.promo_service import PromoService
+from services.testimoni_service import TestimoniService
+from flask import request
 
 load_dotenv()
 
@@ -19,6 +21,7 @@ def get_connection():
 conn = get_connection()
 voucher_service = VoucherService(conn)
 promo_service = PromoService(conn)
+testimoni_service = TestimoniService(conn)
 
 # Inisialisasi route di sini
 @app.route('/')
@@ -79,6 +82,39 @@ def get_promo(kode):
         return jsonify(promo)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    
+@app.route('/api/testimoni/subkategori/<uuid:id_subkategori>', methods=['GET'])
+def get_testimoni_by_subkategori(id_subkategori):
+    try:
+        testimonis = testimoni_service.get_testimoni_by_subkategori(str(id_subkategori))
+        return jsonify(testimonis)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
+@app.route('/api/testimoni', methods=['POST'])
+def create_testimoni():
+    try:
+        data = request.json
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
+        required_fields = ['id_tr_pemesanan', 'teks', 'rating']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({'error': f'Missing required field: {field}'}), 400
+
+        testimoni = testimoni_service.create_testimoni(
+            data['id_tr_pemesanan'],
+            data['teks'],
+            data['rating']
+        )
+        return jsonify({
+            'message': 'Testimonial berhasil ditambahkan',
+            'testimoni': testimoni
+        }), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+    
 
 if __name__ == '__main__':
     app.run(debug=True)
