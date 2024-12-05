@@ -7,7 +7,7 @@ class Pelanggan:
     def create_table(conn):
         with conn.cursor() as cur:
             cur.execute("""
-                CREATE TABLE PELANGGAN (
+                CREATE TABLE IF NOT EXISTS PELANGGAN (
                     Id UUID,
                     Level VARCHAR,
                     FOREIGN KEY (Id) REFERENCES "USER"(Id),
