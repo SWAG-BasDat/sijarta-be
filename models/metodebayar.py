@@ -7,7 +7,7 @@ class MetodeBayar:
     def create_table(conn):
         with conn.cursor() as cur:
             cur.execute("""
-                CREATE TABLE METODE_BAYAR (
+                CREATE TABLE IF NOT EXISTS METODE_BAYAR (
                     Id UUID PRIMARY KEY,
                     Nama VARCHAR NOT NULL
                 );

@@ -16,7 +16,7 @@ class TrPemesananJasa:
     def create_table(conn):
         with conn.cursor() as cur:
             cur.execute("""
-                CREATE TABLE TR_PEMESANAN_JASA (
+                CREATE TABLE IF NOT EXISTS TR_PEMESANAN_JASA (
                     Id UUID PRIMARY KEY,
                     TglPemesanan DATE NOT NULL,
                     TglPekerjaan DATE NOT NULL,
