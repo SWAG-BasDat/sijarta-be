@@ -12,7 +12,7 @@ class Pekerja:
     def create_table(conn):
         with conn.cursor() as cur:
             cur.execute("""
-                CREATE TABLE PEKERJA (
+                CREATE TABLE IF NOT EXISTS PEKERJA (
                     Id UUID,
                     NamaBank VARCHAR,
                     NomorRekening VARCHAR,
