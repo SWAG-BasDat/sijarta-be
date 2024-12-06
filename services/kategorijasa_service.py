@@ -9,7 +9,7 @@ class KategoriJasaService:
             cur.execute("SELECT NamaKategori FROM KATEGORI_JASA")
             return cur.fetchall()
         
-    def get_kategori_by_id(self, kategori_jasa):
+    def get_kategori_by_id(self, id_kategorijasa):
         with self.conn.cursor() as cur:
-            cur.execute("SELECT NamaKategori FROM KATEGORI_JASA WHERE NamaKategori = %s", (kategori_jasa))
+            cur.execute("SELECT NamaKategori FROM KATEGORI_JASA WHERE Id = %s", (id_kategorijasa))
             return cur.fetchone()
