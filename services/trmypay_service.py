@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import datetime
 from uuid import uuid4
 from models.trmypay import TrMyPay
 from kategoritrmypay_service import KategoriTrMyPayService
@@ -198,7 +198,6 @@ class TrMyPayService:
                 result["kategori_transaksi"] = self.kategori_service.get_all_kategori()
 
                 # Tambahkan tanggal transaksi (tanggal saat ini)
-                from datetime import datetime
                 result["tanggal_transaksi"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
             return result
