@@ -1,3 +1,5 @@
+from models.subkategorijasa import SubkategoriJasa
+
 class SubkategoriJasaService:
     def __init__(self, conn):
         self.conn = conn

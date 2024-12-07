@@ -1,3 +1,5 @@
+from models.sesilayanan import SesiLayanan
+
 class SesiLayananService:
     def __init__(self, conn):
         self.conn = conn
