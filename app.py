@@ -17,7 +17,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-port = os.getenv('PORT', '8080')
+port = os.getenv('PORT', '5000')
 logger.info(f"Configured to use PORT: {port}")
 
 if os.path.exists('.env'):
