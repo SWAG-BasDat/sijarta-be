@@ -24,7 +24,16 @@ if os.path.exists('.env'):
     load_dotenv()
 
 app = Flask(__name__)
-app.wsgi_app = ProxyFix(app.wsgi_app)
+app.wsgi_app = ProxyFix(
+    app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1
+)
+
+@app.after_request
+def add_security_headers(response):
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    return response
 
 DATABASE_URL = os.getenv('DATABASE_URL', os.getenv('DATABASE_PUBLIC_URL'))
 
@@ -380,4 +389,5 @@ def delete_diskon(kode):
         return jsonify({'error': str(e)}), 400
 
 if __name__ == '__main__':
-    app.run()
+    port = int(os.getenv('PORT', 8080))
+    app.run(host='0.0.0.0', port=port)
