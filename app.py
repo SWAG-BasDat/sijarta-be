@@ -2,6 +2,7 @@ import os
 from dotenv import load_dotenv
 import psycopg2
 from flask import Flask, jsonify
+from triggers.voucher_triggers import install_voucher_triggers
 from services.voucher_service import VoucherService
 from services.promo_service import PromoService
 from services.testimoni_service import TestimoniService
@@ -16,8 +17,12 @@ def get_connection():
     conn = psycopg2.connect(DATABASE_URL)
     return conn
 
-# Inisialisasi service di sini
 conn = get_connection()
+
+# Inisialisasi trigger di sini
+install_voucher_triggers(conn)
+
+# Inisialisasi service di sini
 voucher_service = VoucherService(conn)
 promo_service = PromoService(conn)
 testimoni_service = TestimoniService(conn)
