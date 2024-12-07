@@ -10,7 +10,7 @@ from triggers.voucher_triggers import install_voucher_triggers
 
 load_dotenv()
 app = Flask(__name__)
-DATABASE_URL = os.getenv('DATABASE_PUBLIC_URL')
+DATABASE_URL = os.getenv('DATABASE_URL', os.getenv('DATABASE_PUBLIC_URL'))
 
 def get_connection():
     conn = psycopg2.connect(DATABASE_URL)
