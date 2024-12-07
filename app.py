@@ -11,7 +11,6 @@ from triggers.voucher_triggers import install_voucher_triggers
 load_dotenv()
 app = Flask(__name__)
 DATABASE_URL = os.getenv('DATABASE_URL', os.getenv('DATABASE_PUBLIC_URL'))
-PORT = int(os.getenv('PORT', 5000))
 
 def get_connection():
     conn = psycopg2.connect(DATABASE_URL)
@@ -262,6 +261,3 @@ def delete_diskon(kode):
         return jsonify({'message': 'Diskon berhasil dihapus'})
     except Exception as e:
         return jsonify({'error': str(e)}), 400
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=PORT)
