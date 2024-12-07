@@ -17,6 +17,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+port = os.getenv('PORT', '8080')
+logger.info(f"Configured to use PORT: {port}")
+
 if os.path.exists('.env'):
     load_dotenv()
 
@@ -377,5 +380,4 @@ def delete_diskon(kode):
         return jsonify({'error': str(e)}), 400
 
 if __name__ == '__main__':
-    port = int(os.getenv('PORT', 8080))
-    app.run(host='0.0.0.0', port=port)
+    app.run()
