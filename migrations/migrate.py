@@ -21,6 +21,7 @@ from models.trpemesananjasa import TrPemesananJasa
 from models.trpemesananstatus import TrPemesananStatus
 from models.user import User
 from models.voucher import Voucher
+from models.trpembelianvoucher import TrPembelianVoucher
 
 def get_connection():
     return psycopg2.connect(os.getenv('DATABASE_PUBLIC_URL'))
@@ -44,6 +45,7 @@ def migrate():
         Testimoni,
         KategoriTrMyPay,
         TrMyPay,
+        TrPembelianVoucher
     ]
 
     try:
