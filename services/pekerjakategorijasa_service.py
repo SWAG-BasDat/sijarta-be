@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from uuid import UUID
 
 
-class PekerjaanKategoriJasaService:
+class PekerjaKategoriJasaService:
     def __init__(self, conn):
         self.conn = conn
 
