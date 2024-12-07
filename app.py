@@ -1,4 +1,5 @@
 import os
+import sys
 import logging
 from dotenv import load_dotenv
 import psycopg2
@@ -7,14 +8,20 @@ from services.voucher_service import VoucherService
 from services.promo_service import PromoService
 from services.testimoni_service import TestimoniService
 from services.diskon_service import DiskonService
+from werkzeug.middleware.proxy_fix import ProxyFix
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
 logger = logging.getLogger(__name__)
 
 if os.path.exists('.env'):
     load_dotenv()
 
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app)
 
 DATABASE_URL = os.getenv('DATABASE_URL', os.getenv('DATABASE_PUBLIC_URL'))
 
@@ -62,6 +69,36 @@ def verify_database():
 if not verify_database():
     raise RuntimeError("Failed to verify database connection")
 
+@app.before_request
+def before_request():
+    try:
+        db = get_db()
+        with db.cursor() as cur:
+            cur.execute('SELECT 1')
+    except Exception as e:
+        logger.error(f"Before request database check failed: {e}")
+        return jsonify({'error': 'Database connection error'}), 500
+
+@app.route('/health')
+def health_check():
+    try:
+        db = get_db()
+        with db.cursor() as cur:
+            cur.execute('SELECT version()')
+            version = cur.fetchone()
+        
+        return jsonify({
+            'status': 'healthy',
+            'database': 'connected',
+            'version': version[0] if version else None
+        })
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return jsonify({
+            'status': 'unhealthy',
+            'error': str(e)
+        }), 500
+    
 @app.route('/')
 def home():
     try:
@@ -340,4 +377,5 @@ def delete_diskon(kode):
         return jsonify({'error': str(e)}), 400
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.getenv('PORT', 8080))
+    app.run(host='0.0.0.0', port=port)
