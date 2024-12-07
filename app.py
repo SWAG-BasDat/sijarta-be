@@ -1,13 +1,12 @@
 import os
 from dotenv import load_dotenv
 import psycopg2
-from flask import Flask, jsonify
-from triggers.voucher_triggers import install_voucher_triggers
+from flask import Flask, jsonify, request
 from services.voucher_service import VoucherService
 from services.promo_service import PromoService
 from services.testimoni_service import TestimoniService
 from services.diskon_service import DiskonService
-from flask import request
+from triggers.voucher_triggers import install_voucher_triggers
 
 load_dotenv()
 app = Flask(__name__)
@@ -28,7 +27,7 @@ promo_service = PromoService(conn)
 testimoni_service = TestimoniService(conn)
 diskon_service = DiskonService(conn)
 
-# Inisialisasi route di sini
+# Inisialisasi routes di sini
 @app.route('/')
 def home():
     return jsonify({
@@ -68,7 +67,14 @@ def get_all_discounts():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# Voucher Routes
+@app.route('/api/vouchers', methods=['GET'])
+def get_all_vouchers():
+    try:
+        vouchers = voucher_service.get_all_vouchers()
+        return jsonify(vouchers)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/vouchers/<kode>', methods=['GET'])
 def get_voucher(kode):
     try:
@@ -94,14 +100,15 @@ def purchase_voucher():
         if not data:
             return jsonify({'error': 'No data provided'}), 400
 
-        required_fields = ['user_id', 'kode_voucher']
+        required_fields = ['user_id', 'kode_voucher', 'metode_bayar_id']
         for field in required_fields:
             if field not in data:
                 return jsonify({'error': f'Missing required field: {field}'}), 400
 
-        result = voucher_service.purchase_voucher_with_mypay(
+        result = voucher_service.purchase_voucher(
             data['user_id'],
-            data['kode_voucher']
+            data['kode_voucher'],
+            data['metode_bayar_id']
         )
         return jsonify(result), 201
     except ValueError as e:
@@ -109,7 +116,14 @@ def purchase_voucher():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# Promo Routes
+@app.route('/api/promos', methods=['GET'])
+def get_all_promos():
+    try:
+        promos = promo_service.get_all_promos()
+        return jsonify(promos)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/promos/<kode>', methods=['GET'])
 def get_promo(kode):
     try:
@@ -120,12 +134,21 @@ def get_promo(kode):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# Testimoni Routes
 @app.route('/api/testimoni/subkategori/<uuid:id_subkategori>', methods=['GET'])
 def get_testimoni_by_subkategori(id_subkategori):
     try:
         testimonis = testimoni_service.get_testimoni_by_subkategori(str(id_subkategori))
         return jsonify(testimonis)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/testimoni/<uuid:id_tr_pemesanan>', methods=['GET'])
+def get_testimoni_by_order(id_tr_pemesanan):
+    try:
+        testimoni = testimoni_service.get_testimoni_by_order(str(id_tr_pemesanan))
+        if not testimoni:
+            return jsonify({'error': 'Testimoni not found'}), 404
+        return jsonify(testimoni)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -150,8 +173,10 @@ def create_testimoni():
             'message': 'Testimonial berhasil ditambahkan',
             'testimoni': testimoni
         }), 201
-    except Exception as e:
+    except ValueError as e:
         return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/testimoni/<uuid:id_tr_pemesanan>', methods=['DELETE'])
 def delete_testimoni(id_tr_pemesanan):
@@ -166,7 +191,6 @@ def delete_testimoni(id_tr_pemesanan):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# Diskon Routes
 @app.route('/api/diskon', methods=['GET'])
 def get_all_diskon():
     try:
@@ -202,9 +226,14 @@ def create_diskon():
             data['potongan'],
             data['min_tr_pemesanan']
         )
+        
         return jsonify({
             'message': 'Diskon berhasil dibuat',
-            'diskon': diskon.__dict__
+            'diskon': {
+                'kode': diskon.kode,
+                'potongan': diskon.potongan,
+                'min_tr_pemesanan': diskon.min_tr_pemesanan
+            }
         }), 201
     except Exception as e:
         return jsonify({'error': str(e)}), 400
