@@ -1,64 +1,55 @@
 import os
 from dotenv import load_dotenv
 import psycopg2
-from psycopg2 import pool
-from flask import Flask, jsonify, request, g
-from services.voucher_service import VoucherService
-from services.promo_service import PromoService
-from services.testimoni_service import TestimoniService
-from services.diskon_service import DiskonService
-from triggers.voucher_triggers import install_voucher_triggers
-
+from flask import Flask, jsonify, request
 
 if os.path.exists('.env'):
     load_dotenv()
 
 app = Flask(__name__)
 
-DATABASE_URL = os.getenv('DATABASE_URL')
-if not DATABASE_URL:
-    DATABASE_URL = os.getenv('DATABASE_PUBLIC_URL')
-
-try:
-    connection_pool = pool.SimpleConnectionPool(
-        minconn=1,
-        maxconn=20,
-        dsn=DATABASE_URL
-    )
-except Exception as e:
-    print(f"Error: {e}")
-    raise
+DATABASE_URL = os.getenv('DATABASE_URL', os.getenv('DATABASE_PUBLIC_URL'))
 
 def get_connection():
-    return connection_pool.getconn()
-
-def return_connection(conn):
-    connection_pool.putconn(conn)
+    try:
+        return psycopg2.connect(DATABASE_URL)
+    except Exception as e:
+        print(f"Database connection error: {e}")
+        raise
 
 try:
-    conn = get_connection()
-    
-    install_voucher_triggers(conn)
-    
-    voucher_service = VoucherService(conn)
-    promo_service = PromoService(conn)
-    testimoni_service = TestimoniService(conn)
-    diskon_service = DiskonService(conn)
-
-    return_connection(conn)
+    test_conn = get_connection()
+    test_conn.close()
+    print("Database connection test successful")
 except Exception as e:
-    print(f"Error during initialization: {e}")
-    if 'conn' in locals():
-        return_connection(conn)
+    print(f"Initial database connection failed: {e}")
     raise
 
-# Inisialisasi routes di sini
+from services.voucher_service import VoucherService
+from services.promo_service import PromoService
+from services.testimoni_service import TestimoniService
+from services.diskon_service import DiskonService
+
+conn = get_connection()
+voucher_service = VoucherService(conn)
+promo_service = PromoService(conn)
+testimoni_service = TestimoniService(conn)
+diskon_service = DiskonService(conn)
+
 @app.route('/')
 def home():
-    return jsonify({
-        'message': 'Welcome to Sijarta API',
-        'status': 'running'
-    })
+    try:
+        return jsonify({
+            'message': 'Welcome to Sijarta API',
+            'status': 'running',
+            'database': 'connected' if get_connection() else 'disconnected'
+        })
+    except Exception as e:
+        return jsonify({
+            'message': 'Welcome to Sijarta API',
+            'status': 'running',
+            'database': f'error: {str(e)}'
+        })
 
 @app.route('/test-connection')
 def test_connection():
@@ -286,26 +277,3 @@ def delete_diskon(kode):
         return jsonify({'message': 'Diskon berhasil dihapus'})
     except Exception as e:
         return jsonify({'error': str(e)}), 400
-
-@app.errorhandler(500)
-def handle_500(error):
-    return jsonify({'error': 'Internal Server Error'}), 500
-
-@app.errorhandler(404)
-def handle_404(error):
-    return jsonify({'error': 'Not Found'}), 404
-
-@app.errorhandler(Exception)
-def handle_error(error):
-    return jsonify({'error': str(error)}), 500
-
-@app.before_request
-def before_request():
-    if not hasattr(g, 'db_conn'):
-        g.db_conn = get_connection()
-
-@app.teardown_request
-def teardown_request(exception=None):
-    db_conn = getattr(g, 'db_conn', None)
-    if db_conn is not None:
-        return_connection(db_conn)
