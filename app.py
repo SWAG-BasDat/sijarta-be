@@ -243,6 +243,8 @@ def get_promo(kode):
         logger.error(f"Get promo failed: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
     
+from datetime import datetime
+
 @app.route('/api/promo', methods=['POST'])
 def create_promo():
     try:
@@ -256,22 +258,21 @@ def create_promo():
                 return jsonify({'error': f'Missing required field: {field}'}), 400
         
         try:
-            if isinstance(data['tgl_akhir_berlaku'], str):
-                datetime.strptime(data['tgl_akhir_berlaku'], '%Y-%m-%d')
+            tgl_akhir = datetime.strptime(data['tgl_akhir_berlaku'], '%Y-%m-%d').date()
         except ValueError:
             return jsonify({'error': 'Invalid date format. Use YYYY-MM-DD'}), 400
         
         services = get_services()
         promo = services['promo'].create_promo(
             data['kode'],
-            data['tgl_akhir_berlaku']
+            tgl_akhir
         )
         
         return jsonify({
             'message': 'Promo berhasil dibuat',
             'promo': {
                 'kode': promo.kode,
-                'tgl_akhir_berlaku': promo.tgl_akhir_berlaku.isoformat() if isinstance(promo.tgl_akhir_berlaku, datetime.date) else promo.tgl_akhir_berlaku
+                'tgl_akhir_berlaku': promo.tgl_akhir_berlaku.strftime('%Y-%m-%d')
             }
         }), 201
         
