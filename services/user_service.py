@@ -145,7 +145,7 @@ class UserService:
         if not user:
             return None
 
-        if verify_password(pwd, user.pwd) == True:
+        if verify_password(user.pwd, pwd) == True:
             return user.id
 
         return None
