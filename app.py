@@ -11,6 +11,7 @@ from services.voucher_service import VoucherService
 from services.promo_service import PromoService
 from services.testimoni_service import TestimoniService
 from services.diskon_service import DiskonService
+from services.kategorijasa_service import KategoriJasaService
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 logging.basicConfig(
@@ -57,7 +58,8 @@ def get_services():
             'voucher': VoucherService(db),
             'promo': PromoService(db),
             'testimoni': TestimoniService(db),
-            'diskon': DiskonService(db)
+            'diskon': DiskonService(db),
+            'kategorijasa': KategoriJasaService(db)
         }
         logger.debug("Created new service instances")
     return g.services
@@ -472,6 +474,52 @@ def delete_diskon(kode):
     except Exception as e:
         logger.error(f"Delete diskon failed: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 400
+    
+@app.route('/api/kategorijasa', methods=['GET'])
+def get_all_kategori():
+    try:
+        services = get_services()
+        kategorijasas = services['kategorijasa'].get_all_kategori()
+        return jsonify(kategorijasas)
+    except Exception as e:
+        logger.error(f"Get all kategorijasas failed: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/kategorijasa/<uuid:id_kategorijasa>', methods=['GET'])
+def get_kategori_by_id(id_kategorijasa):
+    try:
+        services = get_services()
+        kategorijasa = services['kategorijasa'].get_kategori_by_id(str(id_kategorijasa))
+        if not kategorijasa:
+            return jsonify({'error': 'Kategori Jasa not found'}), 404
+        return jsonify(kategorijasa)
+    except Exception as e:
+        logger.error(f"Get kategorijasa by ID failed: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/kategorijasa/<uuid:id_kategorijasa>/subkategori', methods=['GET'])
+def get_subkategori_by_kategori(id_kategorijasa):
+    try:
+        services = get_services()
+        subkategorijasas = services['kategorijasa'].get_subkategori_by_kategori(str(id_kategorijasa))
+        return jsonify(subkategorijasas)
+    except Exception as e:
+        logger.error(f"Get subkategori by kategori failed: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/kategorijasa/subkategori/search', methods=['GET'])
+def search_subkategori():
+    try:
+        keyword = request.args.get('keyword', '')
+        if not keyword:
+            return jsonify({'error': 'Keyword is required'}), 400
+        
+        services = get_services()
+        subkategorijasas = services['kategorijasa'].search_subkategori(keyword)
+        return jsonify(subkategorijasas)
+    except Exception as e:
+        logger.error(f"Search subkategori failed: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))
