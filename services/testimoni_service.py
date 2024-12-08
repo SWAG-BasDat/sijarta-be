@@ -1,110 +1,144 @@
-from datetime import date
-from models.testimoni import Testimoni
+from datetime import date, datetime
+from psycopg2.extras import RealDictCursor
 
 class TestimoniService:
     def __init__(self, conn):
         self.conn = conn
 
     def get_testimoni_by_subkategori(self, id_subkategori):
-        with self.conn.cursor() as cur:
+        with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute("""
                 SELECT 
-                    t.*,
-                    tj.NamaJasa,
-                    p.Nama as NamaPelanggan
-                FROM TESTIMONI t
-                JOIN TR_PEMESANAN_JASA tj ON t.IdTrPemesanan = tj.Id
-                JOIN PELANGGAN p ON tj.IdPelanggan = p.Id
-                WHERE tj.IdSubKategori = %s
-                ORDER BY t.Tgl DESC
+                    t.id_tr_pemesanan,
+                    t.tgl,
+                    t.teks,
+                    t.rating,
+                    p.nama as nama_pelanggan,
+                    tj.nama_jasa,
+                    tj.tanggal_pesanan
+                FROM testimoni t
+                JOIN tr_pemesanan_jasa tj ON t.id_tr_pemesanan = tj.id
+                JOIN pelanggan p ON tj.id_pelanggan = p.id
+                WHERE tj.id_sub_kategori = %s
+                ORDER BY t.tgl DESC, tj.tanggal_pesanan DESC
             """, (id_subkategori,))
-            return cur.fetchall()
+            testimonis = cur.fetchall()
+            return [dict(t) for t in testimonis]
+
+    def get_testimoni_by_order(self, id_tr_pemesanan):
+        with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT 
+                    t.id_tr_pemesanan,
+                    t.tgl,
+                    t.teks,
+                    t.rating
+                FROM testimoni t
+                WHERE t.id_tr_pemesanan = %s
+            """, (id_tr_pemesanan,))
+            return dict(cur.fetchone()) if cur.fetchone() else None
 
     def check_order_status(self, id_tr_pemesanan):
-        with self.conn.cursor() as cur:
+        with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute("""
-                SELECT Status 
-                FROM TR_PEMESANAN_JASA 
-                WHERE Id = %s
+                SELECT 
+                    tps.id_status,
+                    sp.nama as status_nama
+                FROM tr_pemesanan_status tps
+                JOIN status_pesanan sp ON tps.id_status = sp.id
+                WHERE tps.id_tr_pemesanan = %s
+                ORDER BY tps.created_at DESC
+                LIMIT 1
             """, (id_tr_pemesanan,))
             result = cur.fetchone()
+            
             if not result:
-                return False
-            return result['status'] == 'Pesanan Selesai'
+                return False, "Pesanan tidak ditemukan"
+                
+            return result['status_nama'] == 'Pesanan Selesai', "Pesanan harus dalam status 'Pesanan Selesai'"
 
     def can_add_testimoni(self, id_tr_pemesanan):
         try:
-            if not self.check_order_status(id_tr_pemesanan):
-                return False, "Order harus dalam status 'Pesanan Selesai'"
+            is_completed, message = self.check_order_status(id_tr_pemesanan)
+            if not is_completed:
+                return False, message
 
             with self.conn.cursor() as cur:
                 cur.execute("""
-                    SELECT COUNT(*) 
-                    FROM TESTIMONI 
-                    WHERE IdTrPemesanan = %s
+                    SELECT COUNT(*)
+                    FROM testimoni
+                    WHERE id_tr_pemesanan = %s
                 """, (id_tr_pemesanan,))
-                count = cur.fetchone()['count']
+                count = cur.fetchone()[0]
+                
                 if count > 0:
-                    return False, "Testimonial sudah pernah ditambahkan"
-
-            return True, "Testimoni berhasil ditambahkan"
+                    return False, "Testimonial sudah pernah ditambahkan untuk pesanan ini"
+                
+            return True, "Bisa menambahkan testimoni"
         except Exception as e:
-            return False, str(e)
+            return False, f"Error checking testimoni eligibility: {str(e)}"
 
     def create_testimoni(self, id_tr_pemesanan, teks, rating):
         try:
+            if not teks or len(teks.strip()) == 0:
+                raise ValueError("Teks testimoni tidak boleh kosong")
+                
+            if not isinstance(rating, int) or not (1 <= rating <= 5):
+                raise ValueError("Rating harus berupa angka antara 1 sampai 5")
+
             can_add, message = self.can_add_testimoni(id_tr_pemesanan)
             if not can_add:
-                raise Exception(message)
+                raise ValueError(message)
 
-            if not (1 <= rating <= 5):
-                raise Exception("Rating harus berada di antara 1 hingga 5")
-
-            with self.conn.cursor() as cur:
+            with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute("""
-                    INSERT INTO TESTIMONI (IdTrPemesanan, Tgl, Teks, Rating)
+                    INSERT INTO testimoni (id_tr_pemesanan, tgl, teks, rating)
                     VALUES (%s, CURRENT_DATE, %s, %s)
-                    RETURNING *
+                    RETURNING id_tr_pemesanan, tgl, teks, rating
                 """, (id_tr_pemesanan, teks, rating))
                 
-                new_testimoni = cur.fetchone()
-
+                new_testimoni = dict(cur.fetchone())
+                
                 cur.execute("""
                     SELECT 
                         t.*,
-                        tj.NamaJasa,
-                        p.Nama as NamaPelanggan
-                    FROM TESTIMONI t
-                    JOIN TR_PEMESANAN_JASA tj ON t.IdTrPemesanan = tj.Id
-                    JOIN PELANGGAN p ON tj.IdPelanggan = p.Id
-                    WHERE t.IdTrPemesanan = %s AND t.Tgl = CURRENT_DATE
+                        p.nama as nama_pelanggan,
+                        tj.nama_jasa
+                    FROM testimoni t
+                    JOIN tr_pemesanan_jasa tj ON t.id_tr_pemesanan = tj.id
+                    JOIN pelanggan p ON tj.id_pelanggan = p.id
+                    WHERE t.id_tr_pemesanan = %s
                 """, (id_tr_pemesanan,))
                 
                 self.conn.commit()
-                return cur.fetchone()
+                return dict(cur.fetchone())
+
         except Exception as e:
             self.conn.rollback()
-            raise e
+            raise ValueError(f"Gagal membuat testimoni: {str(e)}")
 
-    def delete_testimoni(self, id_tr_pemesanan, tgl):
+    def delete_testimoni(self, id_tr_pemesanan):
         try:
-            with self.conn.cursor() as cur:
-    
-                if not self.check_order_status(id_tr_pemesanan):
-                    raise Exception("Tidak bisa menghapus testimoni karena order belum selesai")
+            with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute("""
+                    SELECT * FROM testimoni 
+                    WHERE id_tr_pemesanan = %s
+                """, (id_tr_pemesanan,))
+                
+                testimoni = cur.fetchone()
+                if not testimoni:
+                    raise ValueError("Testimoni tidak ditemukan")
 
                 cur.execute("""
-                    DELETE FROM TESTIMONI 
-                    WHERE IdTrPemesanan = %s AND Tgl = %s
+                    DELETE FROM testimoni
+                    WHERE id_tr_pemesanan = %s
                     RETURNING *
-                """, (id_tr_pemesanan, tgl))
+                """, (id_tr_pemesanan,))
                 
-                deleted_testimoni = cur.fetchone()
-                if not deleted_testimoni:
-                    raise Exception("Testimoni not found")
-                
+                deleted = dict(cur.fetchone())
                 self.conn.commit()
-                return deleted_testimoni
+                return deleted
+
         except Exception as e:
             self.conn.rollback()
-            raise e
+            raise ValueError(f"Gagal menghapus testimoni: {str(e)}")

@@ -77,7 +77,7 @@ class User:
     def create_table(conn):
         with conn.cursor() as cur:
             cur.execute("""
-                CREATE IF NOT EXISTS TABLE "USER" (
+                CREATE TABLE IF NOT EXISTS "USER" (
                     Id UUID PRIMARY KEY,
                     Nama VARCHAR,
                     JenisKelamin CHAR(1),
