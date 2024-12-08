@@ -63,7 +63,7 @@ def get_services():
             'testimoni': TestimoniService(db),
             'diskon': DiskonService(db),
             'kategorijasa': KategoriJasaService(db),
-            'user': UserService(db)
+            'user': UserService(db),
             'subkategorijasa': SubkategoriJasaService(db),
             'sesilayanan': SesiLayananService(db)
         }
