@@ -5,7 +5,7 @@ from services.kategoritrmypay_service import KategoriTrMyPayService
 
 
 class TrMyPayService:
-    def _init_(self, conn):
+    def __init__(self, conn):
         self.conn = conn
         self.kategori_service = KategoriTrMyPayService(conn)
 
