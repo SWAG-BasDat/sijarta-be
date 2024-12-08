@@ -62,7 +62,7 @@ def verify_password(stored_password, provided_password):
     return new_storage.hex() == stored_password
 
 class User:
-    def __init__(self, id, nama, jenis_kelamin, no_hp, pwd, tgl_lahir, alamat, is_pekerja):
+    def __init__(self, id, nama, jenis_kelamin, no_hp, pwd, tgl_lahir, alamat, saldo_mypay, is_pekerja):
         self.id = id
         self.nama = nama
         self.jenis_kelamin = jenis_kelamin
