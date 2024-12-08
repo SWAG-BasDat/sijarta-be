@@ -62,7 +62,7 @@ def verify_password(stored_password, provided_password):
     return new_storage.hex() == stored_password
 
 class User:
-    def __init__(self, id, nama, jenis_kelamin, no_hp, pwd, tgl_lahir, alamat):
+    def __init__(self, id, nama, jenis_kelamin, no_hp, pwd, tgl_lahir, alamat, is_pekerja):
         self.id = id
         self.nama = nama
         self.jenis_kelamin = jenis_kelamin
@@ -71,6 +71,7 @@ class User:
         self.tgl_lahir = tgl_lahir
         self.alamat = alamat
         self.saldo_mypay = 0
+        self.is_pekerja = is_pekerja
 
     @staticmethod
     def create_table(conn):
@@ -84,7 +85,8 @@ class User:
                     Pwd VARCHAR,
                     TglLahir DATE,
                     Alamat VARCHAR,
-                    SaldoMyPay DECIMAL
+                    SaldoMyPay DECIMAL,
+                    IsPekerja BOOLEAN,
                 );
             """)
             conn.commit()
