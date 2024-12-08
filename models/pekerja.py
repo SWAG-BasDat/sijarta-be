@@ -19,7 +19,7 @@ class Pekerja:
                     NPWP VARCHAR,
                     LinkFoto VARCHAR,
                     Rating FLOAT,
-                    JmlPsnananSelesai INT,
+                    JmlPesananSelesai INT,
                     FOREIGN KEY (Id) REFERENCES "USER"(Id),
                     CONSTRAINT unique_pekerja_id UNIQUE (Id)
                 );
