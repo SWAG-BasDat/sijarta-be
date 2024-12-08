@@ -5,7 +5,7 @@ class UserService:
     def __init__(self, conn):
         self.conn = conn
 
-    def register_user(self, nama, jenis_kelamin, no_hp, pwd, tgl_lahir, alamat, saldo_mypay, is_pekerja, 
+    def register_user(self, nama, jenis_kelamin, no_hp, pwd, tgl_lahir, alamat, is_pekerja, 
                       nama_bank=None, nomor_rekening=None, npwp=None, link_foto=None, level='Bronze'):
         if not all([nama, jenis_kelamin, no_hp, pwd, tgl_lahir, alamat, is_pekerja]):
             raise ValueError("All required parameters must be provided")
