@@ -20,7 +20,7 @@ def hash_password(password):
         password.encode('utf-8'),  # Convert the password to bytes
         salt,  # Provide the salt
         100000,  # It is recommended to use at least 100,000 iterations of SHA-256 
-        dkey_len=128  # Get a 128 byte key
+        dklen=128  # Get a 128 byte key (changed from dkey_len to dklen)
     )
     
     # Combine salt and key for storage
@@ -52,7 +52,7 @@ def verify_password(stored_password, provided_password):
         provided_password.encode('utf-8'),
         salt,
         100000,
-        dkey_len=128
+        dklen=128  # Changed from dkey_len to dklen
     )
     
     # Combine salt and new key
