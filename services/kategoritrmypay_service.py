@@ -1,4 +1,4 @@
-from models.kategoritrmypay import KategoriTrMyPayTrMyPay
+from models.kategoritrmypay import KategoriTrMyPay
 
 class KategoriTrMyPayService:
     def __init__(self, conn):
