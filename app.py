@@ -243,7 +243,7 @@ def get_promo(kode):
         logger.error(f"Get promo failed: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
     
-app.route('/api/promo', methods=['POST'])
+@app.route('/api/promo', methods=['POST'])
 def create_promo():
     try:
         data = request.json
