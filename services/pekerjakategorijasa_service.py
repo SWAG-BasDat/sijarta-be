@@ -66,7 +66,8 @@ class PekerjaKategoriJasaService:
 
         except Exception as e:
             raise Exception(f"Error saat mendapatkan pesanan tersedia: {str(e)}")
-
+        
+    #update
     def ambil_pesanan(self, pekerja_id, pesanan_id):
         """
         Mengambil pesanan oleh pekerja.
@@ -78,26 +79,50 @@ class PekerjaKategoriJasaService:
             with self.conn.cursor() as cur:
                 # Pastikan pesanan masih tersedia
                 cur.execute("""
-                    SELECT IdStatus, Sesi, TglPemesanan
-                    FROM TR_PEMESANAN_JASA
-                    WHERE Id = %s
-                    AND IdStatus = (SELECT Id FROM STATUS_PESANAN WHERE Status = 'Mencari pekerja terdekat');
+                    SELECT MAX(IdStatus) AS IdStatus, Sesi, TglPemesanan
+                    FROM TR_PEMESANAN_JASA pj
+                    JOIN TR_PEMESANAN_STATUS ps ON pj.Id = ps.IdTrPemesanan
+                    WHERE pj.Id = %s
+                    GROUP BY pj.Id, Sesi, TglPemesanan;
                 """, (str(pesanan_id),))
                 pesanan = cur.fetchone()
 
                 if not pesanan:
+                    raise Exception("Pesanan tidak ditemukan.")
+
+                # Pastikan status pesanan adalah 'Mencari pekerja terdekat'
+                cur.execute("""
+                    SELECT Id 
+                    FROM STATUS_PESANAN 
+                    WHERE Status = 'Mencari pekerja terdekat';
+                """)
+                id_status_mencari = cur.fetchone()['id']
+
+                if pesanan["idstatus"] != id_status_mencari:
                     raise Exception("Pesanan tidak tersedia untuk diambil.")
 
                 # Hitung tanggal pekerjaan dan waktu selesai
-                sesi = pesanan["Sesi"]
+                sesi = pesanan["sesi"]
                 tanggal_mulai = datetime.now().date()
                 tanggal_selesai = tanggal_mulai + timedelta(days=sesi)
 
-                # Update pesanan
+                # Tambahkan status baru ke TR_PEMESANAN_STATUS
+                cur.execute("""
+                    SELECT Id 
+                    FROM STATUS_PESANAN 
+                    WHERE Status = 'Menunggu pekerja berangkat';
+                """)
+                id_status_menunggu = cur.fetchone()['id']
+
+                cur.execute("""
+                    INSERT INTO TR_PEMESANAN_STATUS (IdTrPemesanan, IdStatus, TglWaktu)
+                    VALUES (%s, %s, %s);
+                """, (str(pesanan_id), id_status_menunggu, datetime.now()))
+
+                # Update TR_PEMESANAN_JASA untuk menambahkan pekerja dan jadwal pekerjaan
                 cur.execute("""
                     UPDATE TR_PEMESANAN_JASA
-                    SET IdStatus = (SELECT Id FROM STATUS_PESANAN WHERE Status = 'Menunggu pekerja berangkat'),
-                        IdPekerja = %s,
+                    SET IdPekerja = %s,
                         TglPekerjaan = %s,
                         WaktuPekerjaan = %s
                     WHERE Id = %s;
