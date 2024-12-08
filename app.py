@@ -13,6 +13,8 @@ from services.testimoni_service import TestimoniService
 from services.diskon_service import DiskonService
 from services.kategorijasa_service import KategoriJasaService
 from services.user_service import UserService
+from services.sesilayanan_service import SesiLayananService
+from services.subkategorijasa_service import SubkategoriJasaService
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 logging.basicConfig(
@@ -62,6 +64,8 @@ def get_services():
             'diskon': DiskonService(db),
             'kategorijasa': KategoriJasaService(db),
             'user': UserService(db)
+            'subkategorijasa': SubkategoriJasaService(db),
+            'sesilayanan': SesiLayananService(db)
         }
         logger.debug("Created new service instances")
     return g.services
@@ -522,6 +526,125 @@ def search_subkategori():
     except Exception as e:
         logger.error(f"Search subkategori failed: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/subkategorijasa/<uuid:id_subkategori>', methods=['GET'])
+def get_subkategori_by_id(id_subkategori):
+    try:
+        # Fetch subkategori by ID using get_services()
+        subkategori_service = get_services()['subkategorijasa']
+        subkategori = subkategori_service.get_subkategori_by_id(id_subkategori)
+
+        if not subkategori:
+            return jsonify({'message': 'Subcategory not found'}), 404
+
+        # Prepare response data
+        response_data = {
+            'id': subkategori[0],
+            'name': subkategori[1],  # NamaSubkategori
+            'description': subkategori[2],  # Deskripsi
+            'category': subkategori[3]  # NamaKategori
+        }
+
+        return jsonify(response_data)
+
+    except Exception as e:
+        logger.error(f"Error fetching subcategory: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to fetch subcategory'}), 500
+
+@app.route('/api/subkategorijasa/workers/<uuid:id_subkategori>', methods=['GET'])
+def get_workers_by_subkategori(id_subkategori):
+    try:
+        # Fetch workers by subcategory ID using get_services()
+        subkategori_service = get_services()['subkategorijasa']
+        workers = subkategori_service.get_pekerja_by_subkategori(id_subkategori)
+
+        if not workers:
+            return jsonify({'message': 'No workers found for this subcategory'}), 404
+
+        # Prepare response data
+        response_data = [
+            {
+                'id': worker[0],
+                'name': worker[1],  # Nama
+                'rating': worker[2],  # Rating
+                'completed_orders': worker[3]  # JmlPsnananSelesai
+            }
+            for worker in workers
+        ]
+
+        return jsonify(response_data)
+
+    except Exception as e:
+        logger.error(f"Error fetching workers: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to fetch workers'}), 500
+
+@app.route('/api/sesilayanan/<uuid:id_subkategori>', methods=['GET'])
+def get_sesi_layanan_by_subkategori(id_subkategori):
+    try:
+        # Fetch all sessions for this subcategory using get_services()
+        sesi_service = get_services()['sesilayanan']
+        sessions = sesi_service.get_sesi_by_subkategori(id_subkategori)
+        
+        if not sessions:
+            return jsonify({'message': 'No sessions found for this subcategory'}), 404
+
+        # Prepare response data
+        response_data = [
+            {
+                'session': session[0],  # Sesi
+                'price': session[1],     # Harga
+            } for session in sessions
+        ]
+        
+        return jsonify(response_data)
+
+    except Exception as e:
+        logger.error(f"Error fetching sessions: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to fetch sessions'}), 500
+
+@app.route('/api/sesilayanan/details/<uuid:id_subkategori>/<sesi>', methods=['GET'])
+def get_sesi_details(id_subkategori, sesi):
+    try:
+        # Fetch session details for the subcategory and session using get_services()
+        sesi_service = get_services()['sesilayanan']
+        session_details = sesi_service.get_sesi_details(id_subkategori, sesi)
+
+        if not session_details:
+            return jsonify({'message': 'Session not found'}), 404
+
+        # Prepare response data
+        response_data = {
+            'session': session_details[0],  # Sesi
+            'price': session_details[1],    # Harga
+        }
+
+        return jsonify(response_data)
+
+    except Exception as e:
+        logger.error(f"Error fetching session details: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to fetch session details'}), 500
+
+@app.route('/api/sesilayanan/add', methods=['POST'])
+def add_sesi_layanan():
+    try:
+        data = request.get_json()
+        id_subkategori = data.get('id_subkategori')
+        sesi = data.get('sesi')
+        harga = data.get('harga')
+
+        # Validate input
+        if not id_subkategori or not sesi or not harga:
+            return jsonify({'error': 'Missing required fields'}), 400
+
+        # Add new session using get_services()
+        sesi_service = get_services()['sesilayanan']
+        sesi_service.add_sesi_layanan(id_subkategori, sesi, harga)
+
+        return jsonify({'message': 'Session added successfully'}), 201
+
+    except Exception as e:
+        logger.error(f"Error adding session: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to add session'}), 500
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))

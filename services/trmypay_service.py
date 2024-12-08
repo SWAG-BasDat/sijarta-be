@@ -18,7 +18,6 @@ class TrMyPayService:
         """
         try:
             with self.conn.cursor() as cur:
-                # Get category ID from the category name
                 kategori_id = self.kategori_service.get_kategori_id_by_name(nama_kategori)
 
                 # Handle transactions based on category

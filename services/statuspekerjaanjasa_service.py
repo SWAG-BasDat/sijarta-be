@@ -1,3 +1,5 @@
+import datetime
+
 class StatusPekerjaanJasaService:
     def __init__(self, conn):
         self.conn = conn
@@ -66,17 +68,33 @@ class StatusPekerjaanJasaService:
         """
         try:
             with self.conn.cursor() as cur:
-                # Pastikan pesanan milik pekerja
+                # Pastikan pesanan milik pekerja dan ambil status terakhir
                 cur.execute("""
-                    SELECT tpj.IdStatus, sp.Status
-                    FROM TR_PEMESANAN_JASA tpj
-                    JOIN STATUS_PESANAN sp ON tpj.IdStatus = sp.Id
-                    WHERE tpj.Id = %s AND tpj.IdPekerja = %s;
-                """, (str(pesanan_id), str(pekerja_id)))
+                    SELECT ps.IdStatus, sp.Status
+                    FROM TR_PEMESANAN_STATUS ps
+                    JOIN STATUS_PESANAN sp ON ps.IdStatus = sp.Id
+                    WHERE ps.IdTrPemesanan = %s
+                    AND ps.TglWaktu = (
+                        SELECT MAX(TglWaktu)
+                        FROM TR_PEMESANAN_STATUS
+                        WHERE IdTrPemesanan = %s
+                    );
+                """, (str(pesanan_id), str(pesanan_id)))
                 pesanan = cur.fetchone()
 
                 if not pesanan:
-                    raise Exception("Pesanan tidak ditemukan atau tidak dimiliki pekerja ini.")
+                    raise Exception("Pesanan tidak ditemukan atau status tidak valid.")
+
+                # Pastikan pekerja terkait dengan pesanan
+                cur.execute("""
+                    SELECT Id
+                    FROM TR_PEMESANAN_JASA
+                    WHERE Id = %s AND IdPekerja = %s;
+                """, (str(pesanan_id), str(pekerja_id)))
+                pekerja_pesanan = cur.fetchone()
+
+                if not pekerja_pesanan:
+                    raise Exception("Pesanan tidak dimiliki pekerja ini.")
 
                 # Tentukan status berikutnya berdasarkan tombol
                 current_status = pesanan["Status"]
@@ -92,15 +110,22 @@ class StatusPekerjaanJasaService:
                 if not next_status:
                     raise Exception("Aksi tidak valid untuk status saat ini.")
 
-                # Update status pemesanan
+                # Update status di TR_PEMESANAN_STATUS
                 cur.execute("""
-                    UPDATE TR_PEMESANAN_JASA
-                    SET IdStatus = (SELECT Id FROM STATUS_PESANAN WHERE Status = %s)
-                    WHERE Id = %s AND IdPekerja = %s;
-                """, (next_status, str(pesanan_id), str(pekerja_id)))
+                    UPDATE TR_PEMESANAN_STATUS
+                    SET IdStatus = (SELECT Id FROM STATUS_PESANAN WHERE Status = %s),
+                        TglWaktu = %s
+                    WHERE IdTrPemesanan = %s
+                    AND TglWaktu = (
+                        SELECT MAX(TglWaktu)
+                        FROM TR_PEMESANAN_STATUS
+                        WHERE IdTrPemesanan = %s
+                    );
+                """, (next_status, datetime.now(), str(pesanan_id), str(pesanan_id)))
 
                 self.conn.commit()
                 return {"message": f"Status berhasil diubah menjadi '{next_status}'."}
+
         except Exception as e:
             self.conn.rollback()
             raise Exception(f"Error saat mengubah status pekerjaan: {str(e)}")
