@@ -704,3 +704,53 @@ def login_user():
     except Exception as e:
         logger.error(f"Login user failed: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
+    
+@app.route('/api/users', methods=['GET'])
+def get_all_users():
+    try:
+        services = get_services()
+        users = services['user'].get_all_users()
+        return jsonify(users)
+    except Exception as e:
+        logger.error(f"Get all users failed: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+    
+@app.route('/api/users/<uuid:user_id>', methods=['GET'])
+def get_user(user_id):
+    try:
+        services = get_services()
+        user = services['user'].get_user(str(user_id))
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        return jsonify(user)
+    except Exception as e:
+        logger.error(f"Get user failed: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+    
+@app.route('/api/users/<uuid:user_id>/update', methods=['POST'])
+def update_user(user_id):
+    try:
+        data = request.json
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
+        services = get_services()
+        services['user'].update_user(
+            user_id,
+            data.get('nama'),
+            data.get('jenis_kelamin'),
+            data.get('no_hp'),
+            data.get('pwd'),
+            data.get('tgl_lahir'),
+            data.get('alamat'),
+            data.get('is_pekerja'),
+            data.get('nama_bank'),
+            data.get('nomor_rekening'),
+            data.get('npwp'),
+            data.get('link_foto'),
+            data.get('level')
+        )
+        return jsonify({'message': 'User updated successfully'})
+    except Exception as e:
+        logger.error(f"Update user failed: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 400
