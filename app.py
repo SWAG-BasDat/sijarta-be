@@ -15,6 +15,8 @@ from services.kategorijasa_service import KategoriJasaService
 from services.user_service import UserService
 from services.sesilayanan_service import SesiLayananService
 from services.subkategorijasa_service import SubkategoriJasaService
+from services.trmypay_service import TrMyPayService
+from services.kategoritrmypay_service import KategoriTrMyPayService
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 logging.basicConfig(
@@ -65,7 +67,9 @@ def get_services():
             'kategorijasa': KategoriJasaService(db),
             'user': UserService(db),
             'subkategorijasa': SubkategoriJasaService(db),
-            'sesilayanan': SesiLayananService(db)
+            'sesilayanan': SesiLayananService(db),
+            'trmypay': TrMyPayService(db),
+            'kategoritrmypay': KategoriTrMyPayService(db),
         }
         logger.debug("Created new service instances")
     return g.services
@@ -754,3 +758,64 @@ def update_user(user_id):
     except Exception as e:
         logger.error(f"Update user failed: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 400
+    
+@app.route('/api/mypay/<uuid:user_id>', methods=['GET'])
+def get_mypay(user_id):
+    """
+    Endpoint untuk mengambil data MyPay pengguna.
+    """
+    try:
+        # Ambil service MyPay dari services
+        services = get_services()
+        trmypay_service = services.get('trmypay')
+
+        if not trmypay_service:
+            raise Exception("Service 'trmypay' tidak ditemukan.")
+
+        # Ambil data MyPay berdasarkan user_id
+        mypay_data = trmypay_service.get_mypay_overview(user_id)
+
+        # Kembalikan hasil dalam format JSON
+        return jsonify({
+            'saldo': mypay_data.get('saldo', 0),
+            'riwayat_transaksi': mypay_data.get('riwayat_transaksi', [])
+        }), 200
+    except Exception as e:
+        logger.error(f"Error fetching MyPay data: {e}", exc_info=True)
+        return jsonify({'error': f"Gagal mengambil data MyPay: {str(e)}"}), 500
+
+
+@app.route('/api/mypay/transaction-form/<uuid:user_id>', methods=['GET'])
+def get_transaction_form(user_id):
+    try:
+        services = get_services()
+        trmypay_service = services['trmypay']  
+        form_data = trmypay_service.get_transaction_form(str(user_id))
+        return jsonify(form_data)
+    except Exception as e:
+        logger.error(f"Error fetching transaction form: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/mypay/create-transaction/<uuid:user_id>', methods=['POST'])
+def create_transaction(user_id):
+    try:
+        data = request.json
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
+        required_fields = ['nama_kategori', 'data']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({'error': f"Missing required field: {field}"}), 400
+
+        services = get_services()
+        trmypay_service = services['trmypay']  
+        result = trmypay_service.create_transaction(str(user_id), data['nama_kategori'], data['data'])
+        return jsonify(result)
+    except ValueError as ve:
+        return jsonify({'error': str(ve)}), 400
+    except Exception as e:
+        logger.error(f"Error creating transaction: {e}")
+        return jsonify({'error': str(e)}), 500
+
