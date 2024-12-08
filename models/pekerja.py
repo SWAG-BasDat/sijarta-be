@@ -1,5 +1,5 @@
 class Pekerja:
-    def __init__(self, id, nama_bank, nomor_rekening, npwp, link_foto):
+    def __init__(self, id, nama_bank, nomor_rekening, npwp, link_foto, jml_pesanan_selesai):
         self.id = id
         self.nama_bank = nama_bank
         self.nomor_rekening = nomor_rekening
