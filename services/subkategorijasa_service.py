@@ -10,7 +10,7 @@ class SubkategoriJasaService:
                 """
                 SELECT sj.Id, sj.NamaSubkategori, sj.Deskripsi, kj.NamaKategori
                 FROM SUBKATEGORI_JASA sj
-                JOIN KATEGORI_JASA kj ON sj.KategoriJasa = kj.Id
+                JOIN KATEGORI_JASA kj ON sj.KategoriJasaId = kj.Id
                 WHERE sj.Id = %s
                 """,
                 (id_subkategori,)
