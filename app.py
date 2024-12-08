@@ -12,6 +12,7 @@ from services.promo_service import PromoService
 from services.testimoni_service import TestimoniService
 from services.diskon_service import DiskonService
 from services.kategorijasa_service import KategoriJasaService
+from services.user_service import UserService
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 logging.basicConfig(
@@ -59,7 +60,8 @@ def get_services():
             'promo': PromoService(db),
             'testimoni': TestimoniService(db),
             'diskon': DiskonService(db),
-            'kategorijasa': KategoriJasaService(db)
+            'kategorijasa': KategoriJasaService(db),
+            'user': UserService(db)
         }
         logger.debug("Created new service instances")
     return g.services
@@ -524,3 +526,58 @@ def search_subkategori():
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
+
+@app.route('/api/auth/register', methods=['POST'])
+def register_user():
+    try:
+        data = request.json
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
+        required_fields = ['nama', 'jenis_kelamin', 'no_hp', 'pwd', 'tgl_lahir', 'alamat', 'is_pekerja']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({'error': f'Missing required field: {field}'}), 400
+
+        services = get_services()
+        user_id = services['user'].register_user(
+            data['nama'],
+            data['jenis_kelamin'],
+            data['no_hp'],
+            data['pwd'],
+            data['tgl_lahir'],
+            data['alamat'],
+            data['is_pekerja'],
+            data.get('nama_bank'),
+            data.get('nomor_rekening'),
+            data.get('npwp'),
+            data.get('link_foto'),
+            data.get('level')
+        )
+        return jsonify({'user_id': user_id}), 201
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f"Register user failed: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+    
+@app.route('/api/auth/login', methods=['POST'])
+def login_user():
+    try:
+        data = request.json
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
+        required_fields = ['no_hp', 'pwd']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({'error': f'Missing required field: {field}'}), 400
+
+        services = get_services()
+        user = services['user'].login(data['no_hp'], data['pwd'])
+        if not user:
+            return jsonify({'error': 'Invalid credentials'}), 401
+        return jsonify(user)
+    except Exception as e:
+        logger.error(f"Login user failed: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500

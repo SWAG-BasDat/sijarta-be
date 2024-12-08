@@ -1,110 +1,151 @@
 from datetime import date
-from models.testimoni import Testimoni
+from models.user import User, hash_password, verify_password
 
 class UserService:
     def __init__(self, conn):
         self.conn = conn
 
-    def get_testimoni_by_subkategori(self, id_subkategori):
-        with self.conn.cursor() as cur:
-            cur.execute("""
-                SELECT 
-                    t.*,
-                    tj.NamaJasa,
-                    p.Nama as NamaPelanggan
-                FROM TESTIMONI t
-                JOIN TR_PEMESANAN_JASA tj ON t.IdTrPemesanan = tj.Id
-                JOIN PELANGGAN p ON tj.IdPelanggan = p.Id
-                WHERE tj.IdSubKategori = %s
-                ORDER BY t.Tgl DESC
-            """, (id_subkategori,))
-            return cur.fetchall()
+    def register_user(self, nama, jenis_kelamin, no_hp, pwd, tgl_lahir, alamat, is_pekerja, 
+                      nama_bank=None, nomor_rekening=None, npwp=None, link_foto=None, level='Bronze'):
+        if not all([nama, jenis_kelamin, no_hp, pwd, tgl_lahir, alamat, is_pekerja]):
+            raise ValueError("All required parameters must be provided")
 
-    def check_order_status(self, id_tr_pemesanan):
-        with self.conn.cursor() as cur:
-            cur.execute("""
-                SELECT Status 
-                FROM TR_PEMESANAN_JASA 
-                WHERE Id = %s
-            """, (id_tr_pemesanan,))
-            result = cur.fetchone()
-            if not result:
-                return False
-            return result['status'] == 'Pesanan Selesai'
+        hashed_pwd = hash_password(pwd)
 
-    def can_add_testimoni(self, id_tr_pemesanan):
         try:
-            if not self.check_order_status(id_tr_pemesanan):
-                return False, "Order harus dalam status 'Pesanan Selesai'"
-
             with self.conn.cursor() as cur:
+                # Insert user
                 cur.execute("""
-                    SELECT COUNT(*) 
-                    FROM TESTIMONI 
-                    WHERE IdTrPemesanan = %s
-                """, (id_tr_pemesanan,))
-                count = cur.fetchone()['count']
-                if count > 0:
-                    return False, "Testimonial sudah pernah ditambahkan"
+                    INSERT INTO "USER" (Id, Nama, JenisKelamin, NoHP, Pwd, TglLahir, Alamat, SaldoMyPay, IsPekerja)
+                    VALUES (uuid_generate_v4(), %s, %s, %s, %s, %s, %s, 0, %s)
+                    RETURNING id
+                """, (nama, jenis_kelamin, no_hp, hashed_pwd, tgl_lahir, alamat, is_pekerja))
+                user_id = cur.fetchone()[0]
 
-            return True, "Testimoni berhasil ditambahkan"
-        except Exception as e:
-            return False, str(e)
+                if is_pekerja:
+                    if not all([nama_bank, nomor_rekening, npwp, link_foto]):
+                        raise ValueError("All pekerja-specific fields must be provided")
 
-    def create_testimoni(self, id_tr_pemesanan, teks, rating):
-        try:
-            can_add, message = self.can_add_testimoni(id_tr_pemesanan)
-            if not can_add:
-                raise Exception(message)
+                    cur.execute("""
+                        INSERT INTO PEKERJA (Id, NamaBank, NomorRekening, NPWP, LinkFoto, Rating, JmlPesananSelesai)
+                        VALUES (%s, %s, %s, %s, %s, 0, 0)
+                    """, (user_id, nama_bank, nomor_rekening, npwp, link_foto))
+                else:
+                    cur.execute("""
+                        INSERT INTO PELANGGAN (Id, Level)
+                        VALUES (%s, %s)
+                    """, (user_id, level))
 
-            if not (1 <= rating <= 5):
-                raise Exception("Rating harus berada di antara 1 hingga 5")
-
-            with self.conn.cursor() as cur:
-                cur.execute("""
-                    INSERT INTO TESTIMONI (IdTrPemesanan, Tgl, Teks, Rating)
-                    VALUES (%s, CURRENT_DATE, %s, %s)
-                    RETURNING *
-                """, (id_tr_pemesanan, teks, rating))
-                
-                new_testimoni = cur.fetchone()
-
-                cur.execute("""
-                    SELECT 
-                        t.*,
-                        tj.NamaJasa,
-                        p.Nama as NamaPelanggan
-                    FROM TESTIMONI t
-                    JOIN TR_PEMESANAN_JASA tj ON t.IdTrPemesanan = tj.Id
-                    JOIN PELANGGAN p ON tj.IdPelanggan = p.Id
-                    WHERE t.IdTrPemesanan = %s AND t.Tgl = CURRENT_DATE
-                """, (id_tr_pemesanan,))
-                
                 self.conn.commit()
-                return cur.fetchone()
+
+                return user_id
+
         except Exception as e:
             self.conn.rollback()
-            raise e
+            raise Exception(f"Error registering user: {str(e)}")
+        
+    def get_user(self, user_id):
+        with self.conn.cursor() as cur:
+            cur.execute("""
+                SELECT * FROM "USER" WHERE Id = %s
+            """, (user_id,))
+            user = cur.fetchone()
 
-    def delete_testimoni(self, id_tr_pemesanan, tgl):
+            if not user:
+                return None
+
+            return User(*user)
+        
+    def get_user_by_no_hp(self, no_hp):
+        with self.conn.cursor() as cur:
+            cur.execute("""
+                SELECT * FROM "USER" WHERE NoHP = %s
+            """, (no_hp,))
+            user = cur.fetchone()
+
+            if not user:
+                return None
+
+            return User(*user)
+        
+    def get_all_users(self):
+        with self.conn.cursor() as cur:
+            cur.execute("""
+                SELECT * FROM "USER"
+            """)
+            return [User(*user) for user in cur.fetchall()]
+
+    def update_user(self, user_id, nama=None, jenis_kelamin=None, no_hp=None, pwd=None, tgl_lahir=None, alamat=None, is_pekerja=None, 
+                    nama_bank=None, nomor_rekening=None, npwp=None, link_foto=None, level=None):
+        if not any([nama, jenis_kelamin, no_hp, pwd, tgl_lahir, alamat, is_pekerja, nama_bank, nomor_rekening, npwp, link_foto, level]):
+            raise ValueError("At least one field must be provided to update")
+
         try:
             with self.conn.cursor() as cur:
-    
-                if not self.check_order_status(id_tr_pemesanan):
-                    raise Exception("Tidak bisa menghapus testimoni karena order belum selesai")
+                # Update user
+                if nama:
+                    cur.execute("""
+                        UPDATE "USER" SET Nama = %s WHERE Id = %s
+                    """, (nama, user_id))
+                if jenis_kelamin:
+                    cur.execute("""
+                        UPDATE "USER" SET JenisKelamin = %s WHERE Id = %s
+                    """, (jenis_kelamin, user_id))
+                if no_hp:
+                    cur.execute("""
+                        UPDATE "USER" SET NoHP = %s WHERE Id = %s
+                    """, (no_hp, user_id))
+                if pwd:
+                    hashed_pwd = hash_password(pwd)
+                    cur.execute("""
+                        UPDATE "USER" SET Pwd = %s WHERE Id = %s
+                    """, (hashed_pwd, user_id))
+                if tgl_lahir:
+                    cur.execute("""
+                        UPDATE "USER" SET TglLahir = %s WHERE Id = %s
+                    """, (tgl_lahir, user_id))
+                if alamat:
+                    cur.execute("""
+                        UPDATE "USER" SET Alamat = %s WHERE Id = %s
+                    """, (alamat, user_id))
 
-                cur.execute("""
-                    DELETE FROM TESTIMONI 
-                    WHERE IdTrPemesanan = %s AND Tgl = %s
-                    RETURNING *
-                """, (id_tr_pemesanan, tgl))
-                
-                deleted_testimoni = cur.fetchone()
-                if not deleted_testimoni:
-                    raise Exception("Testimoni not found")
+                # Update pekerja
+                if is_pekerja:
+                    if nama_bank:
+                        cur.execute("""
+                            UPDATE PEKERJA SET NamaBank = %s WHERE Id = %s
+                        """, (nama_bank, user_id))
+                    if nomor_rekening:
+                        cur.execute("""
+                            UPDATE PEKERJA SET NomorRekening = %s WHERE Id = %s 
+                        """, (nomor_rekening, user_id))
+                    if npwp:
+                        cur.execute("""
+                            UPDATE PEKERJA SET NPWP = %s WHERE Id = %s
+                        """, (npwp, user_id))
+                    if link_foto:
+                        cur.execute("""
+                            UPDATE PEKERJA SET LinkFoto = %s WHERE Id = %s
+                        """, (link_foto, user_id))
+                else:
+                    if level:
+                        cur.execute("""
+                            UPDATE PELANGGAN SET Level = %s WHERE Id = %s
+                        """, (level, user_id))
                 
                 self.conn.commit()
-                return deleted_testimoni
+
         except Exception as e:
             self.conn.rollback()
-            raise e
+            raise Exception(f"Error registering user: {str(e)}")
+
+    def login(self, no_hp, pwd):
+        user = self.get_user_by_no_hp(no_hp)
+
+        if not user:
+            return None
+
+        if verify_password(user.pwd, pwd):
+            return user.id
+
+        return None
