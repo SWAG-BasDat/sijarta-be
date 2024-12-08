@@ -20,7 +20,7 @@ class KategoriJasaService:
             cur.execute("""
                 SELECT * 
                 FROM SUBKATEGORI_JASA 
-                WHERE KategoriId = %s
+                WHERE KategoriJasaId = %s
             """, (id_kategorijasa,))
             return cur.fetchall()
 
