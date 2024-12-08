@@ -1,7 +1,8 @@
 from datetime import datetime
 from uuid import uuid4
 from models.trmypay import TrMyPay
-from kategoritrmypay_service import KategoriTrMyPayService
+from services.kategoritrmypay_service import KategoriTrMyPayService
+
 
 class TrMyPayService:
     def _init_(self, conn):
