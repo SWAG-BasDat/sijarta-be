@@ -2,6 +2,7 @@ from psycopg2.extras import RealDictCursor
 from decimal import Decimal
 from uuid import uuid4
 from datetime import date, timedelta
+from models.voucher import Voucher
 
 class VoucherService:
     def __init__(self, conn):
@@ -79,7 +80,6 @@ class VoucherService:
                         VALUES (%s, %s, CURRENT_DATE, %s, %s, %s)
                     """, (mypay_id, user_id, -voucher['harga'], kategori['id'], kode_voucher))
 
-                    # Update user's MyPay balance
                     new_balance = Decimal(pelanggan['saldomypay']) - Decimal(voucher['harga'])
                     cur.execute("""
                         UPDATE "USER"
@@ -151,3 +151,28 @@ class VoucherService:
                 AND pv.TglAkhir >= CURRENT_DATE
             """, (user_id,))
             return cur.fetchall()
+        
+    def create_voucher(self, kode, jml_hari_berlaku, kuota_penggunaan, harga):
+        with self.conn.cursor() as cur:
+            cur.execute("SELECT 1 FROM DISKON WHERE Kode = %s", (kode,))
+            if not cur.fetchone():
+                raise ValueError(f"Discount code {kode} does not exist")
+            
+            cur.execute("SELECT 1 FROM VOUCHER WHERE Kode = %s", (kode,))
+            if cur.fetchone():
+                raise ValueError(f"Voucher with code {kode} already exists")
+
+            if jml_hari_berlaku < 0:
+                raise ValueError("Jumlah hari berlaku tidak boleh negatif")
+            if kuota_penggunaan < 0:
+                raise ValueError("Kuota penggunaan tidak boleh negatif")
+            if harga < 0:
+                raise ValueError("Harga tidak boleh negatif")
+                
+            cur.execute("""
+                INSERT INTO VOUCHER (Kode, JmlHariBerlaku, KuotaPenggunaan, Harga) 
+                VALUES (%s, %s, %s, %s)
+            """, (kode, jml_hari_berlaku, kuota_penggunaan, harga))
+            
+            self.conn.commit()
+            return Voucher(kode, jml_hari_berlaku, kuota_penggunaan, harga)
