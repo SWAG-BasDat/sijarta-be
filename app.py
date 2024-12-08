@@ -1,4 +1,6 @@
 import datetime
+from decimal import Decimal
+import decimal
 import os
 import sys
 import logging
@@ -184,6 +186,49 @@ def get_voucher(kode):
         return jsonify(voucher)
     except Exception as e:
         logger.error(f"Get voucher failed: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+    
+@app.route('/api/voucher', methods=['POST'])
+def create_voucher():
+    try:
+        data = request.json
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
+        required_fields = ['kode', 'jml_hari_berlaku', 'kuota_penggunaan', 'harga']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({'error': f'Missing required field: {field}'}), 400
+        
+        try:
+            jml_hari_berlaku = int(data['jml_hari_berlaku'])
+            kuota_penggunaan = int(data['kuota_penggunaan'])
+            harga = Decimal(str(data['harga'])) 
+        except (ValueError, TypeError, decimal.InvalidOperation):
+            return jsonify({'error': 'Invalid numeric values provided'}), 400
+        
+        services = get_services()
+        voucher = services['voucher'].create_voucher(
+            data['kode'],
+            jml_hari_berlaku,
+            kuota_penggunaan,
+            harga
+        )
+        
+        return jsonify({
+            'message': 'Voucher berhasil dibuat',
+            'voucher': {
+                'kode': voucher.kode,
+                'jml_hari_berlaku': voucher.jml_hari_berlaku,
+                'kuota_penggunaan': voucher.kuota_penggunaan,
+                'harga': float(voucher.harga) 
+            }
+        }), 201
+        
+    except ValueError as ve:
+        return jsonify({'error': str(ve)}), 400
+    except Exception as e:
+        logger.error(f"Create voucher failed: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/vouchers/user/<uuid:user_id>', methods=['GET'])
