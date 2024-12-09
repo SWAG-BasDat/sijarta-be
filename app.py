@@ -960,7 +960,3 @@ def get_status_pekerjaan(pekerja_id):
     except Exception as e:
         return jsonify({'error': f"Gagal mendapatkan status pekerjaan: {str(e)}"}), 500
 
-
-
-if __name__ == '__main__':
-    app.run(port=5001)  
