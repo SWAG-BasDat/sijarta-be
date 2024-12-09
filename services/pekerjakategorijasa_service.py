@@ -81,7 +81,7 @@ class PekerjaKategoriJasaService:
                     JOIN KATEGORI_JASA kj ON pkj.kategorijasaid = kj.id
                     WHERE pkj.pekerjaid = %s;
                 """, (str(pekerja_id),))
-                return [{"id": row["Id"], "nama": row["namakategori"]} for row in cur.fetchall()]
+                return [{"id": row["id"], "nama": row["namakategori"]} for row in cur.fetchall()]
         except Exception as e:
             raise Exception(f"Error saat mendapatkan kategori jasa: {str(e)}")
 
@@ -93,7 +93,7 @@ class PekerjaKategoriJasaService:
                     FROM SUBKATEGORI_JASA
                     WHERE kategorijasaid = %s;
                 """, (str(kategori_id),))
-                return [{"id": row["Id"], "nama": row["namasubkategori"]} for row in cur.fetchall()]
+                return [{"id": row["id"], "nama": row["namasubkategori"]} for row in cur.fetchall()]
         except Exception as e:
             raise Exception(f"Error saat mendapatkan subkategori jasa: {str(e)}")
         
