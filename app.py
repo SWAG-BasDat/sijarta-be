@@ -27,6 +27,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_cors import CORS
 from triggers.voucher_triggers import install_voucher_triggers
 from triggers.user_triggers import install_user_triggers
+from triggers.transfer_triggers import install_transfer_triggers
 
 
 logging.basicConfig(
@@ -74,6 +75,14 @@ def get_db():
                 logger.info("User triggers installed successfully")
             except Exception as e:
                 logger.error(f"Failed to install user triggers: {e}", exc_info=True)
+
+            try:
+                install_transfer_triggers(g.db)
+                logger.info("Transfer triggers installed successfully")
+                
+            except Exception as e:
+                logger.error(f"Failed to install voucher triggers: {e}", exc_info=True)
+
         except Exception as e:
             logger.error(f"Failed to create database connection: {e}", exc_info=True)
             raise
@@ -160,6 +169,7 @@ def install_triggers_command():
         db = get_db()
         install_voucher_triggers(db)
         install_user_triggers(db)
+        install_transfer_triggers(db)
         logger.info("Sukses")
     except Exception as e:
         logger.error(f"Gbs: {e}", exc_info=True)

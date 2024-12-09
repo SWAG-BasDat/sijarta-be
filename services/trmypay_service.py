@@ -178,17 +178,15 @@ class TrMyPayService:
                 if not user:
                     raise Exception(f"User dengan ID {user_id} tidak ditemukan.")
 
-                result["nama_user"] = user["nama"]  # Mengakses dengan nama kolom
-                result["saldo"] = user["saldomypay"]  # Mengakses dengan nama kolom
+                result["nama_user"] = user["nama"]  
+                result["saldo"] = user["saldomypay"]  
 
-                # Ambil hanya kategori transaksi tertentu
                 kategori_transaksi = self.kategori_service.get_selected_kategori()
                 result["kategori_transaksi"] = [
                     {"id": kategori["id"], "nama_kategori": kategori["namakategori"]}
                     for kategori in kategori_transaksi
                 ]
 
-                # Tambahkan tanggal transaksi (tanggal saat ini)
                 result["tanggal_transaksi"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
             return result
