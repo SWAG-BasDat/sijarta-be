@@ -24,6 +24,8 @@ from services.pekerja_service import PekerjaService
 from services.pelanggan_service import PelangganService
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_cors import CORS
+from triggers.voucher_triggers import install_voucher_triggers
+from triggers.user_triggers import install_user_triggers
 
 
 logging.basicConfig(
@@ -42,7 +44,7 @@ if os.path.exists('.env'):
 app = Flask(__name__)
 CORS(app, resources={
     r"/*": {
-        "origins": ["http://localhost:3000"],  # Add other allowed origins as needed
+        "origins": ["http://localhost:3000"],  
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization"],
         "supports_credentials": True
@@ -60,6 +62,17 @@ def get_db():
         try:
             g.db = psycopg2.connect(DATABASE_URL)
             logger.debug("Created new database connection")
+            try:
+                install_voucher_triggers(g.db)
+                logger.info("Voucher triggers installed successfully")
+            except Exception as e:
+                logger.error(f"Failed to install voucher triggers: {e}", exc_info=True)     
+
+            try:
+                install_user_triggers(g.db)
+                logger.info("User triggers installed successfully")
+            except Exception as e:
+                logger.error(f"Failed to install user triggers: {e}", exc_info=True)
         except Exception as e:
             logger.error(f"Failed to create database connection: {e}", exc_info=True)
             raise
@@ -138,6 +151,17 @@ def health_check():
             'status': 'unhealthy',
             'error': str(e)
         }), 500
+
+@app.cli.command('install-triggers')
+def install_triggers_command():
+    try:
+        db = get_db()
+        install_voucher_triggers(db)
+        install_user_triggers(db)
+        logger.info("Sukses")
+    except Exception as e:
+        logger.error(f"Gbs: {e}", exc_info=True)
+        raise
     
 @app.route('/')
 def home():
