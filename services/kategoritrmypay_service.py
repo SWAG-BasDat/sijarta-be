@@ -38,7 +38,7 @@ class KategoriTrMyPayService:
         Mendapatkan kategori transaksi tertentu (topup, bayar jasa, transfer, withdraw).
         """
         try:
-            with self.conn.cursor() as cur:
+            with self.conn.cursor(cursor_factory=DictCursor) as cur:  # Gunakan DictCursor
                 cur.execute("""
                     SELECT id, namakategori
                     FROM KATEGORI_TR_MYPAY
@@ -52,5 +52,6 @@ class KategoriTrMyPayService:
                 return cur.fetchall()
         except Exception as e:
             raise Exception(f"Error saat mengambil kategori transaksi tertentu: {str(e)}")
+
 
     
