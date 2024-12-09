@@ -67,12 +67,11 @@ class VoucherService:
                     """, (kategori_id,))
                     kategori = cur.fetchone()
 
-
                 mypay_id = str(uuid4())
                 cur.execute("""
-                    INSERT INTO TR_MYPAY (Id, UserId, Tgl, Nominal, KategoriId, Keterangan)
-                    VALUES (%s, %s, CURRENT_DATE, %s, %s, %s)
-                """, (mypay_id, user_id, -voucher['harga'], kategori['id'], kode_voucher))
+                    INSERT INTO TR_MYPAY (Id, UserId, Tgl, Nominal, KategoriId)
+                    VALUES (%s, %s, CURRENT_DATE, %s, %s)
+                """, (mypay_id, user_id, -voucher['harga'], kategori['id']))
 
                 new_balance = Decimal(pelanggan['saldomypay']) - Decimal(voucher['harga'])
                 cur.execute("""
