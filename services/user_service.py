@@ -75,12 +75,11 @@ class UserService:
 
     def update_user(self, user_id, nama=None, jenis_kelamin=None, no_hp=None, pwd=None, tgl_lahir=None, alamat=None, is_pekerja=None, 
                     nama_bank=None, nomor_rekening=None, npwp=None, link_foto=None, level=None):
-        if not any([nama, jenis_kelamin, no_hp, pwd, tgl_lahir, alamat, is_pekerja, nama_bank, nomor_rekening, npwp, link_foto, level]):
+        if not any([nama, jenis_kelamin, no_hp, pwd, tgl_lahir, alamat, nama_bank, nomor_rekening, npwp, link_foto, level]):
             raise ValueError("At least one field must be provided to update")
 
         try:
             with self.conn.cursor() as cur:
-                # Update user
                 if nama:
                     cur.execute("""
                         UPDATE "USER" SET Nama = %s WHERE Id = %s
@@ -135,7 +134,7 @@ class UserService:
 
         except Exception as e:
             self.conn.rollback()
-            raise Exception(f"Error registering user: {str(e)}")
+            raise Exception(f"Error updating user: {str(e)}")
 
     def login(self, no_hp, pwd):
         user = self.get_user_by_no_hp(no_hp)
