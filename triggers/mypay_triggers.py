@@ -1,6 +1,6 @@
 import psycopg2
 
-def install_refund_trigger(conn):
+def install_refund_triggers(conn):
     with conn.cursor() as cur:
         cur.execute("""
             SELECT EXISTS (
