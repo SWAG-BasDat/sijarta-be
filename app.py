@@ -802,37 +802,53 @@ def get_pelanggan(user_id):
         logger.error(f"Get user failed: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
     
-@app.route('/api/users/<uuid:user_id>/update', methods=['POST'])
+@app.route('/api/users/<uuid:user_id>/update', methods=['PATCH'])
 def update_user(user_id):
     try:
         data = request.json
         if not data:
             return jsonify({'error': 'No data provided'}), 400
 
+        nama = data.get('nama')
+        jenis_kelamin = data.get('jenis_kelamin')
+        no_hp = data.get('no_hp')
+        pwd = data.get('pwd')
+        tgl_lahir = data.get('tgl_lahir')
+        alamat = data.get('alamat')
+        is_pekerja = data.get('is_pekerja')
+        nama_bank = data.get('nama_bank')
+        nomor_rekening = data.get('nomor_rekening')
+        npwp = data.get('npwp')
+        link_foto = data.get('link_foto')
+        level = data.get('level')
+        
         services = get_services()
         services['user'].update_user(
             user_id,
-            data.get('nama'),
-            data.get('jenis_kelamin'),
-            data.get('no_hp'),
-            data.get('pwd'),
-            data.get('tgl_lahir'),
-            data.get('alamat'),
-            data.get('is_pekerja'),
-            data.get('nama_bank'),
-            data.get('nomor_rekening'),
-            data.get('npwp'),
-            data.get('link_foto'),
-            data.get('level')
+            nama,
+            jenis_kelamin,
+            no_hp,
+            pwd,
+            tgl_lahir,
+            alamat,
+            is_pekerja,
+            nama_bank,
+            nomor_rekening,
+            npwp,
+            link_foto,
+            level
         )
+
         updated_user = services['user'].get_user(user_id)
         return jsonify({
             'message': 'User updated successfully',
             'user': updated_user.to_dict()
         }), 200
+
     except Exception as e:
         logger.error(f"Update user failed: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 400
+
     
 @app.route('/api/mypay/<uuid:user_id>', methods=['GET'])
 def get_mypay(user_id):
