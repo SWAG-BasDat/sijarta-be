@@ -26,10 +26,6 @@ class StatusPekerjaanJasaService:
                     JOIN TR_PEMESANAN_STATUS tps ON tpj.id = tps.idtrpemesanan
                     JOIN STATUS_PESANAN sp ON tps.idstatus = sp.id
                     WHERE tpj.IdPekerja = %s
-                    AND tps.TglWaktu = (
-                        SELECT MAX(TglWaktu)
-                        FROM TR_PEMESANAN_STATUS
-                        WHERE IdTrPemesanan = tpj.id
                 )
                 """
                 params = [str(pekerja_id)]
