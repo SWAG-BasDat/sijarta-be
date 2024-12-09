@@ -14,7 +14,7 @@ class TestimoniService:
                     t.Teks as teks,
                     t.Rating as rating,
                     u.Nama as nama_pelanggan,
-                    kj.Nama as nama_jasa
+                    u.Nama as nama_jasa
                 FROM TESTIMONI t
                 JOIN TR_PEMESANAN_JASA tj ON t.IdTrPemesanan = tj.Id
                 JOIN PELANGGAN p ON tj.IdPelanggan = p.Id
