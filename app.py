@@ -95,7 +95,7 @@ def get_services():
             'kategoritrmypay': KategoriTrMyPayService(db),
             'pemesananjasa': PemesananJasaService(db),
             'pekerjakategorijasa': PekerjaKategoriJasaService(db),
-            'statuspekerjaanjasa': StatusPekerjaanJasaService(db)
+            'statuspekerjaanjasa': StatusPekerjaanJasaService(db),
             'pekerja': PekerjaService(db),
             'pelanggan': PelangganService(db)
         }
