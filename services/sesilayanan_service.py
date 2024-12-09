@@ -12,7 +12,7 @@ class SesiLayananService:
                 FROM SESI_LAYANAN
                 WHERE SubkategoriId = %s
                 """,
-                (id_subkategori,)
+                (str(id_subkategori),)
             )
             return cur.fetchall()
         
@@ -24,7 +24,7 @@ class SesiLayananService:
                 FROM SESI_LAYANAN
                 WHERE SubkategoriId = %s AND Sesi = %s
                 """,
-                (id_subkategori, sesi)
+                (str(id_subkategori), str(sesi))
             )
             return cur.fetchone()
         
