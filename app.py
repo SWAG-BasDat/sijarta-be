@@ -625,6 +625,23 @@ def get_workers_by_subkategori(id_subkategori):
             'message': 'Failed to fetch workers',
             'error': str(e)
         }), 500
+    
+@app.route('/api/sesilayanan/<uuid:id_subkategori>', methods=['GET'])
+def get_sesi_by_subkategori(self, id_subkategori):
+    try:
+        # Fetch session details for the subcategory and session using get_services()
+        sesi_service = get_services()['sesilayanan']
+        session_subcategory = sesi_service.get_sesi_details(id_subkategori)
+
+        if not session_subcategory:
+            return jsonify({"error": "No sessions found for this subcategory."}), 404
+        
+        # Format the data into a list of dictionaries
+        sesi_list = [{"session": sesi[0], "price": sesi[1]} for sesi in session_subcategory]
+        return jsonify({"data": sesi_list}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/sesilayanan/details/<uuid:id_subkategori>/<sesi>', methods=['GET'])
 def get_sesi_details(id_subkategori, sesi):
@@ -936,6 +953,23 @@ def get_pekerjaan_jasa(pekerja_id):
         }), 200
     except Exception as e:
         return jsonify({'error': f"Gagal mengambil data pekerjaan jasa: {str(e)}"}), 500
+    
+@app.route('/api/pekerjaan-jasa/<uuid:pekerja_id>/pesanan/<uuid:pesanan_id>', methods=['PUT'])
+def update_pesanan(pekerja_id, pesanan_id):
+
+    try:
+        services = get_services()
+        pekerja_service = services.get('pekerjakategorijasa')
+        
+        if not pekerja_service:
+            raise Exception("Service 'pekerjakategorijasa' tidak ditemukan.")
+        
+        result = pekerja_service.ambil_pesanan(pekerja_id, pesanan_id)
+
+        return jsonify(result), 200
+    except Exception as e:
+        return jsonify({'error': f"Gagal memperbarui pesanan: {str(e)}"}), 500
+
 
 if __name__ == '__main__':
     app.run(port=5001)  

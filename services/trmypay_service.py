@@ -11,20 +11,11 @@ class TrMyPayService:
         self.kategori_service = KategoriTrMyPayService(conn)
 
     def create_transaction(self, user_id, nama_kategori, data):
-        """
-        Creates a transaction for a given category.
-        :param user_id: ID of the user performing the transaction.
-        :param nama_kategori: Name of the category for the transaction (e.g., 'topup MyPay').
-        :param data: Additional data specific to the transaction type (e.g., nominal, id_pemesanan).
-        :return: Result message or details of the created transaction.
-        """
         try:
             with self.conn.cursor() as cur:
                 kategori_id = self.kategori_service.get_kategori_id_by_name(nama_kategori)
 
-                # Handle transactions based on category
                 if nama_kategori == "topup MyPay":
-                    # Update user balance and insert transaction
                     nominal = data.get("nominal")
                     if not nominal or nominal <= 0:
                         raise ValueError("Nominal top-up harus lebih besar dari 0.")
