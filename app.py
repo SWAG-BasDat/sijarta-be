@@ -270,19 +270,19 @@ def purchase_voucher():
         data = request.json
         if not data:
             return jsonify({'error': 'No data provided'}), 400
-
-        required_fields = ['user_id', 'kode_voucher', 'metode_bayar_id']
+        
+        required_fields = ['user_id', 'kode_voucher']
         for field in required_fields:
             if field not in data:
                 return jsonify({'error': f'Missing required field: {field}'}), 400
-
+                
         services = get_services()
         result = services['voucher'].purchase_voucher(
             data['user_id'],
-            data['kode_voucher'],
-            data['metode_bayar_id']
+            data['kode_voucher']
         )
         return jsonify(result), 201
+        
     except ValueError as e:
         return jsonify({'error': str(e)}), 400
     except Exception as e:
