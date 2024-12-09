@@ -91,18 +91,3 @@ class PemesananJasaService:
             except Exception as e:
                 self.conn.rollback()
                 raise e
-
-    def add_testimoni(self, pesanan_id, testimoni):
-        with self.conn.cursor() as cur:
-            try:
-                cur.execute(
-                    """
-                    INSERT INTO TESTIMONI (PesananId, IsiTestimoni)
-                    VALUES (%s, %s)
-                    """,
-                    (pesanan_id, testimoni),
-                )
-                self.conn.commit()
-            except Exception as e:
-                self.conn.rollback()
-                raise e

@@ -17,6 +17,7 @@ from services.sesilayanan_service import SesiLayananService
 from services.subkategorijasa_service import SubkategoriJasaService
 from services.trmypay_service import TrMyPayService
 from services.kategoritrmypay_service import KategoriTrMyPayService
+from services.pemesananjasa_service import PemesananJasaService
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 logging.basicConfig(
@@ -70,6 +71,7 @@ def get_services():
             'sesilayanan': SesiLayananService(db),
             'trmypay': TrMyPayService(db),
             'kategoritrmypay': KategoriTrMyPayService(db),
+            'pemesananjasa': PemesananJasaService(db),
         }
         logger.debug("Created new service instances")
     return g.services
@@ -774,16 +776,21 @@ def get_mypay(user_id):
         return jsonify({'error': f"Gagal mengambil data MyPay: {str(e)}"}), 500
 
 
-@app.route('/api/mypay/transaction-form/<uuid:user_id>', methods=['GET'])
-def get_transaction_form(user_id):
+@app.route('/api/mypay/form/<uuid:user_id>', methods=['GET'])
+def get_mypay_form(user_id):
     try:
         services = get_services()
-        trmypay_service = services['trmypay']  
+        trmypay_service = services.get('trmypay')
+        
+        if not trmypay_service:
+            raise Exception("Service 'trmypay' tidak ditemukan.") 
+        
         form_data = trmypay_service.get_transaction_form(str(user_id))
-        return jsonify(form_data)
+        return jsonify(form_data), 200
+    
     except Exception as e:
-        logger.error(f"Error fetching transaction form: {e}")
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Error fetching MyPay form data: {e}")
+        return jsonify({'error': f"Gagal mengambil form transaksi MyPay: {str(e)}"}), 500
 
 
 @app.route('/api/mypay/create-transaction/<uuid:user_id>', methods=['POST'])
@@ -806,4 +813,60 @@ def create_transaction(user_id):
         return jsonify({'error': str(ve)}), 400
     except Exception as e:
         logger.error(f"Error creating transaction: {e}")
+        return jsonify({'error': str(e)}), 500
+    
+@app.route('/api/pesanan', methods=['POST'])
+def create_pesanan_jasa():
+    try:
+        services = get_services()
+        pemesanan_jasa_service = services['pemesananjasa']
+
+        data = request.json
+        tanggal_pemesanan = datetime.strptime(data['tanggal_pemesanan'], '%Y-%m-%d')
+        diskon_id = data['diskon_id']
+        metode_bayar_id = data['metode_bayar_id']
+        pelanggan_id = data['pelanggan_id']
+
+        pesanan_id = pemesanan_jasa_service.create_pesanan_jasa(tanggal_pemesanan, diskon_id, metode_bayar_id, pelanggan_id)
+        return jsonify({'pesanan_id': pesanan_id}), 201
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/pesanan/<int:pelanggan_id>', methods=['GET'])
+def get_pesanan_by_pelanggan(pelanggan_id):
+    try:
+        services = get_services()
+        pemesanan_jasa_service = services['pemesananjasa']
+        pesanan_list = pemesanan_jasa_service.get_pesanan_by_pelanggan(pelanggan_id)
+        return jsonify(pesanan_list), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/pesanan/status', methods=['PUT'])
+def update_status_pesanan():
+    try:
+        services = get_services()
+        pemesanan_jasa_service = services['pemesananjasa']
+
+        data = request.json
+        pesanan_id = data['pesanan_id']
+        status = data['status']
+
+        pemesanan_jasa_service.update_status_pesanan(pesanan_id, status)
+        return jsonify({'message': 'Status updated successfully'}), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/pesanan/cancel/<int:pesanan_id>', methods=['PUT'])
+def cancel_pesanan(pesanan_id):
+    try:
+        services = get_services()
+        pemesanan_jasa_service = services['pemesananjasa']
+        pemesanan_jasa_service.cancel_pesanan(pesanan_id)
+        return jsonify({'message': 'Pesanan cancelled'}), 200
+
+    except Exception as e:
         return jsonify({'error': str(e)}), 500

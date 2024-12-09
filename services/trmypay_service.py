@@ -168,7 +168,7 @@ class TrMyPayService:
         
     def get_transaction_form(self, user_id):
         """
-        Mengambil data form transaksi MyPay (nama user, saldo, kategori transaksi, tanggal transaksi)
+        Mengambil data form transaksi MyPay (nama user, saldo, kategori transaksi tertentu, tanggal transaksi).
         :param user_id: ID user yang akan melakukan transaksi.
         :return: Dictionary berisi data form transaksi.
         """
@@ -180,23 +180,27 @@ class TrMyPayService:
                 "tanggal_transaksi": None
             }
 
-            with self.conn.cursor() as cur:
+            with self.conn.cursor(cursor_factory=DictCursor) as cur:  # Gunakan DictCursor
                 # Ambil data user
                 cur.execute("""
-                    SELECT Nama, SaldoMyPay 
+                    SELECT nama, saldomypay 
                     FROM "USER" 
-                    WHERE Id = %s;
-                """, (user_id,))
+                    WHERE id = %s;
+                """, (str(user_id),))
                 user = cur.fetchone()
 
                 if not user:
                     raise Exception(f"User dengan ID {user_id} tidak ditemukan.")
 
-                result["nama_user"] = user['Nama']
-                result["saldo"] = user['SaldoMyPay']
+                result["nama_user"] = user["nama"]  # Mengakses dengan nama kolom
+                result["saldo"] = user["saldomypay"]  # Mengakses dengan nama kolom
 
-                # Ambil semua kategori transaksi
-                result["kategori_transaksi"] = self.kategori_service.get_all_kategori()
+                # Ambil hanya kategori transaksi tertentu
+                kategori_transaksi = self.kategori_service.get_selected_kategori()
+                result["kategori_transaksi"] = [
+                    {"id": kategori["id"], "nama_kategori": kategori["namakategori"]}
+                    for kategori in kategori_transaksi
+                ]
 
                 # Tambahkan tanggal transaksi (tanggal saat ini)
                 result["tanggal_transaksi"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
