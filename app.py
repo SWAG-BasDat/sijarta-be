@@ -774,16 +774,21 @@ def get_mypay(user_id):
         return jsonify({'error': f"Gagal mengambil data MyPay: {str(e)}"}), 500
 
 
-@app.route('/api/mypay/transaction-form/<uuid:user_id>', methods=['GET'])
-def get_transaction_form(user_id):
+@app.route('/api/mypay/form/<uuid:user_id>', methods=['GET'])
+def get_mypay_form(user_id):
     try:
         services = get_services()
-        trmypay_service = services['trmypay']  
+        trmypay_service = services.get('trmypay')
+        
+        if not trmypay_service:
+            raise Exception("Service 'trmypay' tidak ditemukan.") 
+        
         form_data = trmypay_service.get_transaction_form(str(user_id))
-        return jsonify(form_data)
+        return jsonify(form_data), 200
+    
     except Exception as e:
-        logger.error(f"Error fetching transaction form: {e}")
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Error fetching MyPay form data: {e}")
+        return jsonify({'error': f"Gagal mengambil form transaksi MyPay: {str(e)}"}), 500
 
 
 @app.route('/api/mypay/create-transaction/<uuid:user_id>', methods=['POST'])
