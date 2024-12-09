@@ -902,6 +902,23 @@ def get_pekerjaan_jasa(pekerja_id):
         }), 200
     except Exception as e:
         return jsonify({'error': f"Gagal mengambil data pekerjaan jasa: {str(e)}"}), 500
+    
+@app.route('/api/pekerjaan-jasa/<uuid:pekerja_id>/pesanan/<uuid:pesanan_id>', methods=['PUT'])
+def update_pesanan(pekerja_id, pesanan_id):
+
+    try:
+        services = get_services()
+        pekerja_service = services.get('pekerjakategorijasa')
+        
+        if not pekerja_service:
+            raise Exception("Service 'pekerjakategorijasa' tidak ditemukan.")
+        
+        result = pekerja_service.ambil_pesanan(pekerja_id, pesanan_id)
+
+        return jsonify(result), 200
+    except Exception as e:
+        return jsonify({'error': f"Gagal memperbarui pesanan: {str(e)}"}), 500
+
 
 if __name__ == '__main__':
     app.run(port=5001)  
