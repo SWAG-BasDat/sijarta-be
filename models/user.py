@@ -29,37 +29,42 @@ def hash_password(password):
     # Convert to hex for database storage
     return storage.hex()
 
-def verify_password(stored_password, provided_password):
+def verify_password(stored_password_hex: str, input_password: str) -> bool:
     """
-    Verify a stored password against one provided by user
+    Verify if the input password matches the stored hashed password.
     
     Args:
-        stored_password (str): Hex-encoded password from database
-        provided_password (str): Plain text password to verify
+        stored_password_hex (str): Hexadecimal string of salt + hashed password
+        input_password (str): Plain text password to verify
     
     Returns:
         bool: True if password is correct, False otherwise
     """
-    # Convert hex storage back to bytes
-    storage = bytes.fromhex(stored_password)
+    try:
+        # Convert hex string back to bytes
+        stored_password = bytes.fromhex(stored_password_hex)
+        
+        # Extract salt (first 32 bytes)
+        salt = stored_password[:32]
+        
+        # Extract the stored key (rest of the bytes)
+        stored_key = stored_password[32:]
+        
+        # Hash the input password with the extracted salt
+        new_key = hashlib.pbkdf2_hmac(
+            'sha256',  # Same hash algorithm
+            input_password.encode('utf-8'),  # Convert input password to bytes
+            salt,  # Use the original salt
+            100000,  # Same number of iterations
+            dklen=128  # Same key length
+        )
+        
+        # Compare the newly generated key with the stored key
+        return new_key == stored_key
     
-    # Extract salt (first 32 bytes)
-    salt = storage[:32]
-    
-    # Hash the provided password with the extracted salt
-    new_key = hashlib.pbkdf2_hmac(
-        'sha256',
-        provided_password.encode('utf-8'),
-        salt,
-        100000,
-        dklen=128  # Changed from dkey_len to dklen
-    )
-    
-    # Combine salt and new key
-    new_storage = salt + new_key
-    
-    # Compare the new storage with the original
-    return new_storage.hex() == stored_password
+    except (ValueError, TypeError):
+        # Handle potential conversion errors
+        return False
 
 class User:
     def __init__(self, id, nama, jenis_kelamin, no_hp, pwd, tgl_lahir, alamat, saldo_mypay, is_pekerja):
