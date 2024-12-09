@@ -19,6 +19,7 @@ from services.trmypay_service import TrMyPayService
 from services.kategoritrmypay_service import KategoriTrMyPayService
 from services.pemesananjasa_service import PemesananJasaService
 from services.pekerjakategorijasa_service import PekerjaKategoriJasaService
+from services.statuspekerjaanjasa_service import StatusPekerjaanJasaService
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 logging.basicConfig(
@@ -73,7 +74,8 @@ def get_services():
             'trmypay': TrMyPayService(db),
             'kategoritrmypay': KategoriTrMyPayService(db),
             'pemesananjasa': PemesananJasaService(db),
-            'pekerjakategorijasa': PekerjaKategoriJasaService(db)
+            'pekerjakategorijasa': PekerjaKategoriJasaService(db),
+            'statuspekerjaanjasa': StatusPekerjaanJasaService(db)
         }
         logger.debug("Created new service instances")
     return g.services
