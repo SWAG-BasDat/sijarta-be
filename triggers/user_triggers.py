@@ -6,7 +6,7 @@ def install_user_triggers(conn):
             SELECT EXISTS (
                 SELECT 1 
                 FROM pg_trigger 
-                WHERE tgname = 'validate_voucher_trigger'
+                WHERE tgname = 'validate_user_trigger'
             );
         """)
         trigger_exists = cur.fetchone()[0]
