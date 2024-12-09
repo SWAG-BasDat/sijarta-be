@@ -15,7 +15,7 @@ class PemesananJasaService:
                     (diskon_id,)
                 )
                 diskon = cur.fetchone()
-                diskon_nominal = diskon['Nominal'] if diskon else 0
+                diskon_nominal = diskon[0] if diskon else 0
 
                 cur.execute(
                     """
@@ -31,7 +31,7 @@ class PemesananJasaService:
                         'Menunggu Pembayaran',
                     ),
                 )
-                pesanan_id = cur.fetchone()['Id']
+                pesanan_id = cur.fetchone()[0]
                 self.conn.commit()
                 return pesanan_id
             except Exception as e:
@@ -39,22 +39,26 @@ class PemesananJasaService:
                 raise e
             
     def get_pesanan_by_pelanggan(self, pelanggan_id):
-        with self.conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT tpj.Id, tpj.TanggalPemesanan, tpj.TotalPembayaran, tpj.StatusPesanan,
-                sl.Sesi, sl.Harga,
-                u.Nama AS NamaPekerja
-                FROM TR_PEMESANAN_JASA tpj
-                LEFT JOIN SESI_LAYANAN sl ON tpj.Id = sl.SubkategoriId
-                LEFT JOIN PEKERJA p ON sl.SubkategoriId = p.id
-                LEFT JOIN "USER" ON p.Id = u.Id
-                WHERE tpj,PelangganId = %s
-                ORDER BY tpj.TanggalPemesanan DESC
-                """,
-                (pelanggan_id,)
-            )
-            return cur.fetchall()
+        try:
+            with self.conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT tpj.Id, tpj.TanggalPemesanan, tpj.TotalPembayaran, tpj.StatusPesanan,
+                        sl.Sesi, sl.Harga,
+                        u.Nama AS NamaPekerja
+                    FROM TR_PEMESANAN_JASA tpj
+                    LEFT JOIN SESI_LAYANAN sl ON tpj.Id = sl.SubkategoriId
+                    LEFT JOIN PEKERJA p ON sl.SubkategoriId = p.id
+                    LEFT JOIN "USER" ON p.Id = u.Id
+                    WHERE tpj.PelangganId = %s
+                    ORDER BY tpj.TanggalPemesanan DESC
+                    """,
+                    (pelanggan_id,)
+                )
+                return cur.fetchall()
+        except Exception as e:
+            self.conn.rollback()
+            raise Exception(f"Database error in get_pesanan_by_pelanggan: {str(e)}")
         
     def update_status_pesanan(self, pesanan_id, status):
         with self.conn.cursor() as cur:
