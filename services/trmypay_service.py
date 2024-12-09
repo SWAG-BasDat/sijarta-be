@@ -158,11 +158,6 @@ class TrMyPayService:
 
         
     def get_transaction_form(self, user_id):
-        """
-        Mengambil data form transaksi MyPay (nama user, saldo, kategori transaksi tertentu, tanggal transaksi).
-        :param user_id: ID user yang akan melakukan transaksi.
-        :return: Dictionary berisi data form transaksi.
-        """
         try:
             result = {
                 "nama_user": None,
@@ -204,11 +199,6 @@ class TrMyPayService:
         
     # read mypay
     def get_mypay_overview(self, user_id):
-        """
-        Mengambil informasi saldo dan riwayat transaksi pengguna berdasarkan database SIJARTA.
-        :param user_id: UUID dari pengguna.
-        :return: Dictionary berisi saldo dan daftar riwayat transaksi.
-        """
         try:
             result = {
                 "no_hp": "",

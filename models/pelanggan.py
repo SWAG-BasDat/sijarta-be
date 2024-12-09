@@ -15,3 +15,9 @@ class Pelanggan:
                 );
             """)
             conn.commit()
+
+    def to_dict(self):
+        return {
+            'id': str(self.id),
+            'level': self.level,
+        }
