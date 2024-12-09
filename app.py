@@ -20,6 +20,7 @@ from services.trmypay_service import TrMyPayService
 from services.kategoritrmypay_service import KategoriTrMyPayService
 from services.pemesananjasa_service import PemesananJasaService
 from services.pekerjakategorijasa_service import PekerjaKategoriJasaService
+from services.statuspekerjaanjasa_service import StatusPekerjaanJasaService
 from services.pekerja_service import PekerjaService
 from services.pelanggan_service import PelangganService
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -94,6 +95,7 @@ def get_services():
             'kategoritrmypay': KategoriTrMyPayService(db),
             'pemesananjasa': PemesananJasaService(db),
             'pekerjakategorijasa': PekerjaKategoriJasaService(db),
+            'statuspekerjaanjasa': StatusPekerjaanJasaService(db),
             'pekerja': PekerjaService(db),
             'pelanggan': PelangganService(db)
         }
@@ -626,44 +628,21 @@ def get_workers_by_subkategori(id_subkategori):
             'error': str(e)
         }), 500
     
-@app.route('/api/sesilayanan/<uuid:id_subkategori>', methods=['GET'])
-def get_sesi_by_subkategori(self, id_subkategori):
-    try:
-        # Fetch session details for the subcategory and session using get_services()
-        sesi_service = get_services()['sesilayanan']
-        session_subcategory = sesi_service.get_sesi_details(id_subkategori)
 
+@app.route('/api/sesilayanan/<uuid:id_subkategori>', methods=['GET'])
+def get_sesi_by_subkategori(id_subkategori):
+    try:
+        sesi_service = get_services()['sesilayanan']
+        session_subcategory = sesi_service.get_sesi_by_subkategori(id_subkategori)
+        
         if not session_subcategory:
             return jsonify({"error": "No sessions found for this subcategory."}), 404
         
-        # Format the data into a list of dictionaries
         sesi_list = [{"session": sesi[0], "price": sesi[1]} for sesi in session_subcategory]
         return jsonify({"data": sesi_list}), 200
-
+        
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-@app.route('/api/sesilayanan/details/<uuid:id_subkategori>/<sesi>', methods=['GET'])
-def get_sesi_details(id_subkategori, sesi):
-    try:
-        # Fetch session details for the subcategory and session using get_services()
-        sesi_service = get_services()['sesilayanan']
-        session_details = sesi_service.get_sesi_details(id_subkategori, sesi)
-
-        if not session_details:
-            return jsonify({'message': 'Session not found'}), 404
-
-        # Prepare response data
-        response_data = {
-            'session': session_details[0],  # Sesi
-            'price': session_details[1],    # Harga
-        }
-
-        return jsonify(response_data)
-
-    except Exception as e:
-        logger.error(f"Error fetching session details: {e}", exc_info=True)
-        return jsonify({'error': 'Failed to fetch session details'}), 500
 
 @app.route('/api/sesilayanan/add', methods=['POST'])
 def add_sesi_layanan():
@@ -816,21 +795,15 @@ def update_user(user_id):
     
 @app.route('/api/mypay/<uuid:user_id>', methods=['GET'])
 def get_mypay(user_id):
-    """
-    Endpoint untuk mengambil data MyPay pengguna.
-    """
     try:
-        # Ambil service MyPay dari services
         services = get_services()
         trmypay_service = services.get('trmypay')
 
         if not trmypay_service:
             raise Exception("Service 'trmypay' tidak ditemukan.")
 
-        # Ambil data MyPay berdasarkan user_id
         mypay_data = trmypay_service.get_mypay_overview(user_id)
 
-        # Kembalikan hasil dalam format JSON
         return jsonify({
             'no_hp': mypay_data.get('no_hp', ""),
             'saldo': mypay_data.get('saldo', 0),
@@ -981,7 +954,23 @@ def update_pesanan(pekerja_id, pesanan_id):
         return jsonify(result), 200
     except Exception as e:
         return jsonify({'error': f"Gagal memperbarui pesanan: {str(e)}"}), 500
+    
 
+@app.route('/api/status-pekerjaan/<uuid:pekerja_id>', methods=['GET'])
+def get_status_pekerjaan(pekerja_id):
+    try:
+        services = get_services()
+        statuspekerjaan_service = services.get('statuspekerjaanjasa')
 
-if __name__ == '__main__':
-    app.run(port=5001)  
+        if not statuspekerjaan_service:
+            raise Exception("Service 'statuspekerjaanjasa' tidak ditemukan.")
+
+        nama_jasa = request.args.get('nama_jasa', None)
+        status = request.args.get('status', None)
+
+        pekerjaan = statuspekerjaan_service.get_status_pekerjaan(pekerja_id, nama_jasa, status)
+
+        return jsonify({"status_pekerjaan": pekerjaan}), 200
+    except Exception as e:
+        return jsonify({'error': f"Gagal mendapatkan status pekerjaan: {str(e)}"}), 500
+

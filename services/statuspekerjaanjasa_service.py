@@ -1,4 +1,6 @@
 import datetime
+from psycopg2.extras import DictCursor
+
 
 class StatusPekerjaanJasaService:
     def __init__(self, conn):
@@ -6,7 +8,7 @@ class StatusPekerjaanJasaService:
 
     def get_status_pekerjaan(self, pekerja_id, nama_jasa=None, status=None):
         try:
-            with self.conn.cursor() as cur:
+            with self.conn.cursor(cursor_factory=DictCursor) as cur:
                 query = """
                     SELECT
                         tpj.id AS pesananid,
@@ -18,6 +20,7 @@ class StatusPekerjaanJasaService:
                         sp.status
                     FROM TR_PEMESANAN_JASA tpj
                     JOIN SESI_LAYANAN sl ON tpj.idkategorijasa = sl.subkategoriid
+                    AND tpj.Sesi = sl.Sesi
                     JOIN SUBKATEGORI_JASA skj ON sl.subkategoriid = skj.id
                     JOIN PELANGGAN pel ON tpj.idpelanggan = pel.id
                     JOIN "USER" usr ON pel.id = usr.id
@@ -55,13 +58,6 @@ class StatusPekerjaanJasaService:
             raise Exception(f"Error saat mendapatkan status pekerjaan: {str(e)}")
 
     def update_status_pemesanan(self, pekerja_id, pesanan_id, button_action):
-        """
-        Mengubah status pekerjaan jasa berdasarkan tombol yang ditekan.
-        :param pekerja_id: UUID pekerja.
-        :param pesanan_id: UUID pesanan jasa.
-        :param button_action: Action dari tombol (1, 2, atau 3).
-        :return: Pesan sukses.
-        """
         try:
             with self.conn.cursor() as cur:
                 # Pastikan pesanan milik pekerja dan ambil status terakhir
