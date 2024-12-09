@@ -809,6 +809,7 @@ def get_pelanggan(user_id):
 def update_user(user_id):
     try:
         data = request.json
+        user_id = str(user_id)
         if not data:
             return jsonify({'error': 'No data provided'}), 400
 
