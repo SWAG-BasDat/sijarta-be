@@ -9,18 +9,20 @@ class TestimoniService:
         with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute("""
                 SELECT 
-                    t.id_tr_pemesanan,
-                    t.tgl,
-                    t.teks,
-                    t.rating,
-                    p.nama as nama_pelanggan,
-                    tj.nama_jasa,
-                    tj.tanggal_pesanan
-                FROM testimoni t
-                JOIN tr_pemesanan_jasa tj ON t.id_tr_pemesanan = tj.id
-                JOIN pelanggan p ON tj.id_pelanggan = p.id
-                WHERE tj.id_sub_kategori = %s
-                ORDER BY t.tgl DESC, tj.tanggal_pesanan DESC
+                    t.IdTrPemesanan as idtrpemesanan,
+                    t.Tgl as tgl,
+                    t.Teks as teks,
+                    t.Rating as rating,
+                    u.Nama as nama_pelanggan,
+                    kj.NamaKategori as nama_jasa
+                FROM TESTIMONI t
+                JOIN TR_PEMESANAN_JASA tj ON t.IdTrPemesanan = tj.Id
+                JOIN SUBKATEGORI_JASA sj ON tj.IdKategoriJasa = sj.Id
+                JOIN KATEGORI_JASA kj ON sj.KategoriJasaId = kj.Id
+                JOIN PELANGGAN p ON tj.IdPelanggan = p.Id
+                JOIN "USER" u ON p.Id = u.Id
+                WHERE sj.Id = %s
+                ORDER BY t.Tgl DESC
             """, (id_subkategori,))
             testimonis = cur.fetchall()
             return [dict(t) for t in testimonis]

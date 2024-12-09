@@ -589,7 +589,8 @@ def get_subkategori_by_id(id_subkategori):
                 'id': subkategori['id'],
                 'name': subkategori['nama_subkategori'],
                 'description': subkategori['deskripsi'],
-                'category': subkategori['nama_kategori']
+                'category': subkategori['nama_kategori'],
+                'categoryid': subkategori['id_kategori']
             }
         })
 
@@ -628,6 +629,30 @@ def get_workers_by_kategori(id_kategori):
             'error': str(e)
         }), 500
     
+@app.route('/api/subkategorijasa/add_pekerja_to_kategori', methods=['POST'])
+def add_pekerja_to_kategori():
+    try:
+        data = request.json
+        required_fields = ['id', 'kategori_jasa_id']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({'error': f'Missing required field: {field}'}), 400
+        
+        services = get_services()
+        pekerja_id = services['subkategorijasa'].add_pekerja_to_kategori(
+            data['id'],
+            data['kategori_jasa_id']
+        )
+        
+        return jsonify({
+            'message': 'Pekerja berhasil ditambahkan',
+            'pekerja_id': pekerja_id
+        }), 201
+        
+    except ValueError as ve:
+        return jsonify({"error": str(ve)}), 400
+    except Exception as e:
+        return jsonify({"error": f"An error occurred: {str(e)}"}), 500
 
 @app.route('/api/sesilayanan/<uuid:id_subkategori>', methods=['GET'])
 def get_sesi_by_subkategori(id_subkategori):
@@ -647,20 +672,27 @@ def get_sesi_by_subkategori(id_subkategori):
 @app.route('/api/sesilayanan/add', methods=['POST'])
 def add_sesi_layanan():
     try:
-        data = request.get_json()
-        id_subkategori = data.get('id_subkategori')
-        sesi = data.get('sesi')
-        harga = data.get('harga')
+        data = request.json
+        required_fields = ['sub_kategori_id', 'sesi', 'harga']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({'error': f'Missing required field: {field}'}), 400
+            
+        services = get_services()
+        sesi_layanan = services['sesilayanan'].add_sesi_layanan(
+            data['sub_kategori_id'],
+            data['sesi'],
+            data['harga']
+        )
 
-        # Validate input
-        if not id_subkategori or not sesi or not harga:
-            return jsonify({'error': 'Missing required fields'}), 400
-
-        # Add new session using get_services()
-        sesi_service = get_services()['sesilayanan']
-        sesi_service.add_sesi_layanan(id_subkategori, sesi, harga)
-
-        return jsonify({'message': 'Session added successfully'}), 201
+        return jsonify({
+            'message': 'Sesi layanan berhasil ditambahkan',
+            'pekerja': {
+                'sub_kategori_id': sesi_layanan.sub_kategori_id,
+                'sesi': sesi_layanan.sesi,
+                'harga': sesi_layanan.harga
+            }
+        }), 201
 
     except Exception as e:
         logger.error(f"Error adding session: {e}", exc_info=True)
@@ -1004,11 +1036,7 @@ def get_status_pekerjaan(pekerja_id):
 
 @app.route('/api/status-pemesanan/<uuid:pekerja_id>/<uuid:pesanan_id>', methods=['PUT'])
 def update_status_pemesanan(pekerja_id, pesanan_id):
-    """
-    Endpoint untuk memperbarui status pekerjaan berdasarkan tindakan tombol.
-    """
     try:
-        # Ambil parameter 'button_action' dari body permintaan
         data = request.get_json()
         button_action = data.get('button_action')
 
@@ -1020,8 +1048,7 @@ def update_status_pemesanan(pekerja_id, pesanan_id):
 
         if not statuspekerjaan_service:
             raise Exception("Service 'statuspekerjaanjasa' tidak ditemukan.")
-
-        # Panggil fungsi update_status_pemesanan dari service
+        
         result = statuspekerjaan_service.update_status_pemesanan(
             pekerja_id, pesanan_id, button_action
         )

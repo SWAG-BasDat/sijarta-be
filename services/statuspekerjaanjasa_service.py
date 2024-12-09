@@ -1,6 +1,7 @@
 import datetime
 from psycopg2.extras import DictCursor
 
+
 class StatusPekerjaanJasaService:
     def __init__(self, conn):
         self.conn = conn
@@ -59,6 +60,7 @@ class StatusPekerjaanJasaService:
     def update_status_pemesanan(self, pekerja_id, pesanan_id, button_action):
         try:
             with self.conn.cursor() as cur:
+                # Pastikan pesanan milik pekerja dan ambil status terakhir
                 cur.execute("""
                     SELECT ps.IdStatus, sp.Status
                     FROM TR_PEMESANAN_STATUS ps
@@ -75,6 +77,7 @@ class StatusPekerjaanJasaService:
                 if not pesanan:
                     raise Exception("Pesanan tidak ditemukan atau status tidak valid.")
 
+                # Pastikan pekerja terkait dengan pesanan
                 cur.execute("""
                     SELECT Id
                     FROM TR_PEMESANAN_JASA
@@ -85,6 +88,7 @@ class StatusPekerjaanJasaService:
                 if not pekerja_pesanan:
                     raise Exception("Pesanan tidak dimiliki pekerja ini.")
 
+                # Tentukan status berikutnya berdasarkan tombol
                 current_status = pesanan["Status"]
                 next_status = None
 
@@ -98,6 +102,7 @@ class StatusPekerjaanJasaService:
                 if not next_status:
                     raise Exception("Aksi tidak valid untuk status saat ini.")
 
+                # Update status di TR_PEMESANAN_STATUS
                 cur.execute("""
                     UPDATE TR_PEMESANAN_STATUS
                     SET IdStatus = (SELECT Id FROM STATUS_PESANAN WHERE Status = %s),
