@@ -12,7 +12,7 @@ class SubkategoriJasaService:
             with self.conn.cursor() as cur:
                 cur.execute(
                     """
-                    SELECT sj.Id, sj.NamaSubkategori, sj.Deskripsi, kj.NamaKategori
+                    SELECT sj.Id, sj.NamaSubkategori, sj.Deskripsi, sj.KategoriJasaId, kj.NamaKategori
                     FROM SUBKATEGORI_JASA sj
                     JOIN KATEGORI_JASA kj ON sj.KategoriJasaId = kj.Id
                     WHERE sj.Id = %s
