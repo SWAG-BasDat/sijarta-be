@@ -589,7 +589,8 @@ def get_subkategori_by_id(id_subkategori):
                 'id': subkategori['id'],
                 'name': subkategori['nama_subkategori'],
                 'description': subkategori['deskripsi'],
-                'category': subkategori['nama_kategori']
+                'category': subkategori['nama_kategori'],
+                'categoryid': subkategori['id_kategori']
             }
         })
 
