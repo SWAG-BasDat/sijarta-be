@@ -10,7 +10,7 @@ class StatusPekerjaanJasaService:
         try:
             with self.conn.cursor(cursor_factory=DictCursor) as cur:
                 query = """
-                    SELECT
+                    SELECT DISTINCTgi
                         tpj.id AS pesananid,
                         skj.namasubkategori AS namajasa,
                         usr.nama AS namapelanggan,
