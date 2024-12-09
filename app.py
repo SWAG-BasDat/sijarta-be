@@ -989,11 +989,7 @@ def get_status_pekerjaan(pekerja_id):
 
 @app.route('/api/status-pemesanan/<uuid:pekerja_id>/<uuid:pesanan_id>', methods=['PUT'])
 def update_status_pemesanan(pekerja_id, pesanan_id):
-    """
-    Endpoint untuk memperbarui status pekerjaan berdasarkan tindakan tombol.
-    """
     try:
-        # Ambil parameter 'button_action' dari body permintaan
         data = request.get_json()
         button_action = data.get('button_action')
 
@@ -1005,8 +1001,7 @@ def update_status_pemesanan(pekerja_id, pesanan_id):
 
         if not statuspekerjaan_service:
             raise Exception("Service 'statuspekerjaanjasa' tidak ditemukan.")
-
-        # Panggil fungsi update_status_pemesanan dari service
+        
         result = statuspekerjaan_service.update_status_pemesanan(
             pekerja_id, pesanan_id, button_action
         )
