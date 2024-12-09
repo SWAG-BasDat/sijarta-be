@@ -10,7 +10,7 @@ class User:
         self.pwd = pwd
         self.tgl_lahir = tgl_lahir
         self.alamat = alamat
-        self.saldo_mypay = 0
+        self.saldo_mypay = saldo_mypay
         self.is_pekerja = is_pekerja
 
     @staticmethod
