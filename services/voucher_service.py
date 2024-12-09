@@ -1,8 +1,9 @@
 from psycopg2.extras import RealDictCursor
 from decimal import Decimal
-from uuid import uuid4
+from uuid import UUID, uuid4
 from datetime import date, timedelta
 from models.voucher import Voucher
+
 
 class VoucherService:
     def __init__(self, conn):
@@ -31,16 +32,19 @@ class VoucherService:
     def purchase_voucher(self, user_id, kode_voucher):
         try:
             with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
+                user_uuid = UUID(user_id) if isinstance(user_id, str) else user_id
+
                 cur.execute("""
                     SELECT p.Id, u.SaldoMyPay, u.Nama 
                     FROM PELANGGAN p
                     JOIN "USER" u ON p.Id = u.Id
                     WHERE p.Id = %s
-                """, (user_id,))
+                """, (user_uuid,))
                 pelanggan = cur.fetchone()
                 
                 if not pelanggan:
                     raise ValueError("User bukan merupakan pelanggan")
+
 
                 voucher = self.get_voucher_by_kode(kode_voucher)
                 if not voucher:
@@ -48,8 +52,7 @@ class VoucherService:
 
                 if voucher['kuotapenggunaan'] <= 0:
                     raise ValueError("Voucher sudah habis")
-
-
+                
                 if Decimal(pelanggan['saldomypay']) < Decimal(voucher['harga']):
                     raise ValueError("Saldo MyPay tidak mencukupi")
 
@@ -71,14 +74,14 @@ class VoucherService:
                 cur.execute("""
                     INSERT INTO TR_MYPAY (Id, UserId, Tgl, Nominal, KategoriId, Keterangan)
                     VALUES (%s, %s, CURRENT_DATE, %s, %s, %s)
-                """, (mypay_id, user_id, -voucher['harga'], kategori['id'], kode_voucher))
+                """, (mypay_id, user_uuid, -voucher['harga'], kategori['id'], kode_voucher))
 
                 new_balance = Decimal(pelanggan['saldomypay']) - Decimal(voucher['harga'])
                 cur.execute("""
                     UPDATE "USER"
                     SET SaldoMyPay = %s
                     WHERE Id = %s
-                """, (new_balance, user_id))
+                """, (new_balance, user_uuid))
 
                 tgl_awal = date.today()
                 tgl_akhir = tgl_awal + timedelta(days=voucher['jmlhariberlaku'])
@@ -88,7 +91,7 @@ class VoucherService:
                     INSERT INTO TR_PEMBELIAN_VOUCHER 
                     (Id, TglAwal, TglAkhir, TelahDigunakan, IdPelanggan, IdVoucher)
                     VALUES (%s, %s, %s, 0, %s, %s)
-                """, (purchase_id, tgl_awal, tgl_akhir, user_id, kode_voucher))
+                """, (purchase_id, tgl_awal, tgl_akhir, user_uuid, kode_voucher))
 
                 cur.execute("""
                     UPDATE VOUCHER
@@ -102,22 +105,22 @@ class VoucherService:
                     "status": "success",
                     "message": "Voucher berhasil dibeli",
                     "data": {
-                        "purchase_id": purchase_id,
+                        "purchase_id": str(purchase_id), 
                         "kode_voucher": kode_voucher,
-                        "tgl_awal": tgl_awal,
-                        "tgl_akhir": tgl_akhir,
+                        "tgl_awal": tgl_awal.isoformat(), 
+                        "tgl_akhir": tgl_akhir.isoformat(),
                         "nama_user": pelanggan['nama'],
                         "harga": float(voucher['harga']),
                         "saldo_tersisa": float(new_balance)
                     }
                 }
+
         except ValueError as e:
             self.conn.rollback()
             raise ValueError(str(e))
         except Exception as e:
             self.conn.rollback()
             raise Exception(f"Error sistem: {str(e)}")
-        
 
     def get_user_vouchers(self, user_id):
         with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
