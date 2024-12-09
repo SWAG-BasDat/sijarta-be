@@ -5,28 +5,24 @@ class StatusPekerjaanJasaService:
         self.conn = conn
 
     def get_status_pekerjaan(self, pekerja_id, nama_jasa=None, status=None):
-        """
-        Mendapatkan daftar pekerjaan jasa berdasarkan filter nama jasa dan status.
-        :param pekerja_id: UUID pekerja.
-        :param nama_jasa: Optional nama jasa untuk filter.
-        :param status: Optional status pemesanan untuk filter.
-        :return: List pekerjaan jasa.
-        """
         try:
             with self.conn.cursor() as cur:
                 query = """
                     SELECT
-                        tpj.Id AS PesananId,
-                        skj.NamaSubkategori AS NamaJasa,
-                        pel.Nama AS NamaPelanggan,
-                        tpj.TglPemesanan,
-                        tpj.TotalBiaya,
-                        tpj.Sesi,
-                        sp.Status
+                        tpj.id AS pesananid,
+                        skj.namasubkategori AS namajasa,
+                        usr.nama AS namapelanggan,
+                        tpj.tglpemesanan,
+                        tpj.totalbiaya,
+                        tpj.sesi,
+                        sp.status
                     FROM TR_PEMESANAN_JASA tpj
-                    JOIN SUBKATEGORI_JASA skj ON tpj.IdKategoriJasa = skj.Id
-                    JOIN PELANGGAN pel ON tpj.IdPelanggan = pel.Id
-                    JOIN STATUS_PESANAN sp ON tpj.IdStatus = sp.Id
+                    JOIN SESI_LAYANAN sl ON tpj.idkategorijasa = sl.subkategoriid
+                    JOIN SUBKATEGORI_JASA skj ON sl.subkategoriid = skj.id
+                    JOIN PELANGGAN pel ON tpj.idpelanggan = pel.id
+                    JOIN "USER" usr ON pel.id = usr.id
+                    JOIN TR_PEMESANAN_STATUS tps ON tpj.id = tps.idtrpemesanan
+                    JOIN STATUS_PESANAN sp ON tps.idstatus = sp.id
                     WHERE tpj.IdPekerja = %s
                 """
                 params = [str(pekerja_id)]
@@ -47,13 +43,13 @@ class StatusPekerjaanJasaService:
                 pesanan = cur.fetchall()
 
                 return [{
-                    "pesanan_id": row["PesananId"],
-                    "nama_jasa": row["NamaJasa"],
-                    "nama_pelanggan": row["NamaPelanggan"],
-                    "tanggal_pemesanan": row["TglPemesanan"],
-                    "total_biaya": row["TotalBiaya"],
-                    "sesi": row["Sesi"],
-                    "status": row["Status"]
+                    "pesanan_id": row["pesananid"],
+                    "nama_jasa": row["namajasa"],
+                    "nama_pelanggan": row["namapelanggan"],
+                    "tanggal_pemesanan": row["tglpemesanan"],
+                    "total_biaya": row["totalbiaya"],
+                    "sesi": row["sesi"],
+                    "status": row["status"]
                 } for row in pesanan]
         except Exception as e:
             raise Exception(f"Error saat mendapatkan status pekerjaan: {str(e)}")
