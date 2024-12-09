@@ -7,67 +7,98 @@ class PekerjaKategoriJasaService:
         self.conn = conn
 
     def get_pesanan_tersedia(self, pekerja_id, kategori_id=None, subkategori_id=None):
-        """
-        Mendapatkan daftar pesanan jasa yang tersedia untuk pekerja.
-        :param pekerja_id: UUID pekerja.
-        :param kategori_id: Optional UUID kategori jasa untuk filter.
-        :param subkategori_id: Optional UUID subkategori jasa untuk filter.
-        :return: List pesanan jasa.
-        """
         try:
             with self.conn.cursor() as cur:
+                # Ambil kategori jasa yang dapat dilakukan oleh pekerja
                 cur.execute("""
-                    SELECT KategoriJasaId
+                    SELECT kategorijasaid
                     FROM PEKERJA_KATEGORI_JASA
-                    WHERE PekerjaId = %s;
+                    WHERE pekerjaid = %s;
                 """, (str(pekerja_id),))
-                kategori_jasa_pekerja = [row['KategoriJasaId'] for row in cur.fetchall()]
+                kategori_jasa_pekerja = [row['kategorijasaid'] for row in cur.fetchall()]
 
                 if not kategori_jasa_pekerja:
                     raise Exception("Pekerja tidak memiliki kategori jasa.")
 
+                # Query pesanan jasa dengan join tabel status
                 query = """
                     SELECT
-                        tpj.Id AS PesananId,
-                        tpj.TglPemesanan,
-                        tpj.TotalBiaya,
-                        tpj.Sesi,
-                        skj.NamaSubkategori,
-                        pel.Nama AS NamaPelanggan
+                        tpj.id AS pesananid,
+                        tpj.tglpemesanan,
+                        tpj.totalbiaya,
+                        tpj.sesi,
+                        skj.namasubkategori,
+                        usr.nama AS namapelanggan
                     FROM TR_PEMESANAN_JASA tpj
-                    JOIN SUBKATEGORI_JASA skj ON tpj.IdKategoriJasa = skj.Id
-                    JOIN PELANGGAN pel ON tpj.IdPelanggan = pel.Id
-                    WHERE tpj.IdKategoriJasa IN %s
-                    AND tpj.IdStatus = (SELECT Id FROM STATUS_PESANAN WHERE Status = 'Mencari pekerja terdekat')
+                    JOIN SESI_LAYANAN sl ON tpj.idkategorijasa = sl.subkategoriid
+                    JOIN SUBKATEGORI_JASA skj ON sl.subkategoriid = skj.id
+                    JOIN PELANGGAN pel ON tpj.idpelanggan = pel.id
+                    JOIN "USER" usr ON pel.id = usr.id
+                    JOIN TR_PEMESANAN_STATUS tps ON tpj.id = tps.idtrpemesanan
+                    JOIN STATUS_PESANAN sp ON tps.idstatus = sp.id
+                    WHERE sl.subkategoriid IN %s
+                    AND sp.status = 'Mencari pekerja terdekat'
                 """
                 params = [tuple(kategori_jasa_pekerja)]
 
+                # Filter berdasarkan kategori jasa jika diberikan
                 if kategori_id:
-                    query += " AND skj.KategoriJasaId = %s"
+                    query += " AND skj.kategorijasaid = %s"
                     params.append(str(kategori_id))
 
+                # Filter berdasarkan subkategori jasa jika diberikan
                 if subkategori_id:
-                    query += " AND skj.Id = %s"
+                    query += " AND skj.id = %s"
                     params.append(str(subkategori_id))
 
-                query += " ORDER BY tpj.TglPemesanan ASC;"
+                query += " ORDER BY tpj.tglpemesanan ASC;"
 
                 cur.execute(query, params)
                 pesanan = cur.fetchall()
 
-                return [{
-                    "pesanan_id": row["PesananId"],
-                    "tanggal_pemesanan": row["TglPemesanan"],
-                    "total_biaya": row["TotalBiaya"],
-                    "sesi": row["Sesi"],
-                    "nama_subkategori": row["NamaSubkategori"],
-                    "nama_pelanggan": row["NamaPelanggan"]
-                } for row in pesanan]
+                # Format hasil query menjadi list of dictionaries
+                return [
+                    {
+                        "pesanan_id": row["pesananid"],
+                        "tanggal_pemesanan": row["tglpemesanan"],
+                        "total_biaya": row["totalbiaya"],
+                        "sesi": row["sesi"],
+                        "nama_subkategori": row["namasubkategori"],
+                        "nama_pelanggan": row["namapelanggan"]
+                    }
+                    for row in pesanan
+                ]
 
         except Exception as e:
             raise Exception(f"Error saat mendapatkan pesanan tersedia: {str(e)}")
         
-    #update
+    def get_kategori_jasa(self, pekerja_id):
+        try:
+            with self.conn.cursor() as cur:
+                cur.execute("""
+                    SELECT kj.id, kj.namakategori
+                    FROM PEKERJA_KATEGORI_JASA pkj
+                    JOIN KATEGORI_JASA kj ON pkj.kategorijasaid = kj.id
+                    WHERE pkj.pekerjaid = %s;
+                """, (str(pekerja_id),))
+                return [{"id": row["Id"], "nama": row["namakategori"]} for row in cur.fetchall()]
+        except Exception as e:
+            raise Exception(f"Error saat mendapatkan kategori jasa: {str(e)}")
+
+    def get_subkategori_jasa(self, kategori_id):
+        try:
+            with self.conn.cursor() as cur:
+                cur.execute("""
+                    SELECT id, namasubkategori
+                    FROM SUBKATEGORI_JASA
+                    WHERE kategorijasaid = %s;
+                """, (str(kategori_id),))
+                return [{"id": row["Id"], "nama": row["namasubkategori"]} for row in cur.fetchall()]
+        except Exception as e:
+            raise Exception(f"Error saat mendapatkan subkategori jasa: {str(e)}")
+        
+        
+    #update belum fix
     def ambil_pesanan(self, pekerja_id, pesanan_id):
         """
         Mengambil pesanan oleh pekerja.
@@ -138,39 +169,3 @@ class PekerjaKategoriJasaService:
         except Exception as e:
             self.conn.rollback()
             raise Exception(f"Error saat mengambil pesanan: {str(e)}")
-
-
-    def get_kategori_jasa(self, pekerja_id):
-        """
-        Mendapatkan kategori jasa yang dapat dilakukan oleh pekerja.
-        :param pekerja_id: UUID pekerja.
-        :return: List kategori jasa.
-        """
-        try:
-            with self.conn.cursor() as cur:
-                cur.execute("""
-                    SELECT kj.Id, kj.NamaKategori
-                    FROM PEKERJA_KATEGORI_JASA pkj
-                    JOIN KATEGORI_JASA kj ON pkj.KategoriJasaId = kj.Id
-                    WHERE pkj.PekerjaId = %s;
-                """, (str(pekerja_id),))
-                return [{"id": row["Id"], "nama": row["NamaKategori"]} for row in cur.fetchall()]
-        except Exception as e:
-            raise Exception(f"Error saat mendapatkan kategori jasa: {str(e)}")
-
-    def get_subkategori_jasa(self, kategori_id):
-        """
-        Mendapatkan subkategori jasa berdasarkan kategori.
-        :param kategori_id: UUID kategori jasa.
-        :return: List subkategori jasa.
-        """
-        try:
-            with self.conn.cursor() as cur:
-                cur.execute("""
-                    SELECT Id, NamaSubkategori
-                    FROM SUBKATEGORI_JASA
-                    WHERE KategoriJasaId = %s;
-                """, (str(kategori_id),))
-                return [{"id": row["Id"], "nama": row["NamaSubkategori"]} for row in cur.fetchall()]
-        except Exception as e:
-            raise Exception(f"Error saat mendapatkan subkategori jasa: {str(e)}")
