@@ -25,3 +25,14 @@ class Pekerja:
                 );
             """)
             conn.commit()
+
+    def to_dict(self):
+        return {
+            'id': str(self.id),
+            'nama_bank': self.nama_bank,
+            'nomor_rekening': self.nomor_rekening,
+            'npwp': self.npwp,
+            'link_foto': self.link_foto,
+            'rating': self.rating,
+            'jml_pesanan_selesai': self.jml_pesanan_selesai,
+        }
