@@ -749,6 +749,30 @@ def get_user(user_id):
         logger.error(f"Get user failed: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
     
+@app.route('/api/workers/<uuid:user_id>', methods=['GET'])
+def get_pekerja(user_id):
+    try:
+        services = get_services()
+        user = services['pekerja'].get_pekerja(str(user_id))
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        return jsonify(user.to_dict())
+    except Exception as e:
+        logger.error(f"Get user failed: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+    
+@app.route('/api/customers/<uuid:user_id>', methods=['GET'])
+def get_pelanggan(user_id):
+    try:
+        services = get_services()
+        user = services['pelanggan'].get_pelanggan(str(user_id))
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        return jsonify(user.to_dict())
+    except Exception as e:
+        logger.error(f"Get user failed: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+    
 @app.route('/api/users/<uuid:user_id>/update', methods=['POST'])
 def update_user(user_id):
     try:
