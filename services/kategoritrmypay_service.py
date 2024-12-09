@@ -1,4 +1,5 @@
 from models.kategoritrmypay import KategoriTrMyPay
+from psycopg2.extras import DictCursor
 
 class KategoriTrMyPayService:
     def __init__(self, conn):
