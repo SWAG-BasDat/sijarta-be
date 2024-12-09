@@ -698,9 +698,6 @@ def add_sesi_layanan():
         logger.error(f"Error adding session: {e}", exc_info=True)
         return jsonify({'error': 'Failed to add session'}), 500
 
-if __name__ == '__main__':
-    port = int(os.getenv('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
 
 @app.route('/api/auth/register', methods=['POST'])
 def register_user():
