@@ -632,33 +632,26 @@ def get_workers_by_kategori(id_kategori):
 @app.route('/api/subkategorijasa/add_pekerja_to_kategori', methods=['POST'])
 def add_pekerja_to_kategori():
     try:
-        # Get the data from the request body
         data = request.json
         required_fields = ['id', 'kategori_jasa_id']
         for field in required_fields:
             if field not in data:
                 return jsonify({'error': f'Missing required field: {field}'}), 400
         
-        
         services = get_services()
-        kategori = services['subkategorijasa'].add_pekerja_to_kategori(
+        pekerja_id = services['subkategorijasa'].add_pekerja_to_kategori(
             data['id'],
             data['kategori_jasa_id']
         )
-
+        
         return jsonify({
             'message': 'Pekerja berhasil ditambahkan',
-            'diskon': {
-                'id': kategori.id,
-                'kategori_jasa_id': kategori.kategori_jasa_id
-            }
+            'pekerja_id': pekerja_id
         }), 201
-
+        
     except ValueError as ve:
-        # This will catch the custom error if the worker is already added to the category
         return jsonify({"error": str(ve)}), 400
     except Exception as e:
-        # Catch other unexpected errors
         return jsonify({"error": f"An error occurred: {str(e)}"}), 500
 
 @app.route('/api/sesilayanan/<uuid:id_subkategori>', methods=['GET'])
