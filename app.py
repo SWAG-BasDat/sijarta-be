@@ -28,6 +28,7 @@ from flask_cors import CORS
 from triggers.voucher_triggers import install_voucher_triggers
 from triggers.user_triggers import install_user_triggers
 from triggers.transfer_triggers import install_transfer_triggers
+from triggers.mypay_triggers import install_refund_triggers
 
 
 logging.basicConfig(
@@ -82,6 +83,11 @@ def get_db():
                 
             except Exception as e:
                 logger.error(f"Failed to install voucher triggers: {e}", exc_info=True)
+                
+                install_refund_triggers(g.db)
+                logger.info("Refund triggers installed successfully")
+            except Exception as e:
+                logger.error(f"Failed to install refund triggers: {e}", exc_info=True)
 
         except Exception as e:
             logger.error(f"Failed to create database connection: {e}", exc_info=True)
@@ -170,6 +176,7 @@ def install_triggers_command():
         install_voucher_triggers(db)
         install_user_triggers(db)
         install_transfer_triggers(db)
+        install_refund_triggers(db)
         logger.info("Sukses")
     except Exception as e:
         logger.error(f"Gbs: {e}", exc_info=True)
@@ -639,6 +646,30 @@ def get_workers_by_kategori(id_kategori):
             'error': str(e)
         }), 500
     
+@app.route('/api/subkategorijasa/add_pekerja_to_kategori', methods=['POST'])
+def add_pekerja_to_kategori():
+    try:
+        data = request.json
+        required_fields = ['id', 'kategori_jasa_id']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({'error': f'Missing required field: {field}'}), 400
+        
+        services = get_services()
+        pekerja_id = services['subkategorijasa'].add_pekerja_to_kategori(
+            data['id'],
+            data['kategori_jasa_id']
+        )
+        
+        return jsonify({
+            'message': 'Pekerja berhasil ditambahkan',
+            'pekerja_id': pekerja_id
+        }), 201
+        
+    except ValueError as ve:
+        return jsonify({"error": str(ve)}), 400
+    except Exception as e:
+        return jsonify({"error": f"An error occurred: {str(e)}"}), 500
 
 @app.route('/api/sesilayanan/<uuid:id_subkategori>', methods=['GET'])
 def get_sesi_by_subkategori(id_subkategori):
@@ -658,28 +689,32 @@ def get_sesi_by_subkategori(id_subkategori):
 @app.route('/api/sesilayanan/add', methods=['POST'])
 def add_sesi_layanan():
     try:
-        data = request.get_json()
-        id_subkategori = data.get('id_subkategori')
-        sesi = data.get('sesi')
-        harga = data.get('harga')
+        data = request.json
+        required_fields = ['sub_kategori_id', 'sesi', 'harga']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({'error': f'Missing required field: {field}'}), 400
+            
+        services = get_services()
+        sesi_layanan = services['sesilayanan'].add_sesi_layanan(
+            data['sub_kategori_id'],
+            data['sesi'],
+            data['harga']
+        )
 
-        # Validate input
-        if not id_subkategori or not sesi or not harga:
-            return jsonify({'error': 'Missing required fields'}), 400
-
-        # Add new session using get_services()
-        sesi_service = get_services()['sesilayanan']
-        sesi_service.add_sesi_layanan(id_subkategori, sesi, harga)
-
-        return jsonify({'message': 'Session added successfully'}), 201
+        return jsonify({
+            'message': 'Sesi layanan berhasil ditambahkan',
+            'pekerja': {
+                'sub_kategori_id': sesi_layanan.sub_kategori_id,
+                'sesi': sesi_layanan.sesi,
+                'harga': sesi_layanan.harga
+            }
+        }), 201
 
     except Exception as e:
         logger.error(f"Error adding session: {e}", exc_info=True)
         return jsonify({'error': 'Failed to add session'}), 500
 
-if __name__ == '__main__':
-    port = int(os.getenv('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
 
 @app.route('/api/auth/register', methods=['POST'])
 def register_user():
@@ -784,37 +819,54 @@ def get_pelanggan(user_id):
         logger.error(f"Get user failed: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
     
-@app.route('/api/users/<uuid:user_id>/update', methods=['POST'])
+@app.route('/api/users/<uuid:user_id>/update', methods=['PATCH'])
 def update_user(user_id):
     try:
         data = request.json
+        user_id = str(user_id)
         if not data:
             return jsonify({'error': 'No data provided'}), 400
 
+        nama = data.get('nama')
+        jenis_kelamin = data.get('jenis_kelamin')
+        no_hp = data.get('no_hp')
+        pwd = data.get('pwd')
+        tgl_lahir = data.get('tgl_lahir')
+        alamat = data.get('alamat')
+        is_pekerja = data.get('is_pekerja')
+        nama_bank = data.get('nama_bank')
+        nomor_rekening = data.get('nomor_rekening')
+        npwp = data.get('npwp')
+        link_foto = data.get('link_foto')
+        level = data.get('level')
+        
         services = get_services()
         services['user'].update_user(
             user_id,
-            data.get('nama'),
-            data.get('jenis_kelamin'),
-            data.get('no_hp'),
-            data.get('pwd'),
-            data.get('tgl_lahir'),
-            data.get('alamat'),
-            data.get('is_pekerja'),
-            data.get('nama_bank'),
-            data.get('nomor_rekening'),
-            data.get('npwp'),
-            data.get('link_foto'),
-            data.get('level')
+            nama,
+            jenis_kelamin,
+            no_hp,
+            pwd,
+            tgl_lahir,
+            alamat,
+            is_pekerja,
+            nama_bank,
+            nomor_rekening,
+            npwp,
+            link_foto,
+            level
         )
+
         updated_user = services['user'].get_user(user_id)
         return jsonify({
             'message': 'User updated successfully',
             'user': updated_user.to_dict()
         }), 200
+
     except Exception as e:
         logger.error(f"Update user failed: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 400
+
     
 @app.route('/api/mypay/<uuid:user_id>', methods=['GET'])
 def get_mypay(user_id):

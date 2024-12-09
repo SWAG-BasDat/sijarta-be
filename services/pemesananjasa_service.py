@@ -10,7 +10,7 @@ class PemesananJasaService:
             try:
                 cur.execute(
                     """
-                    SELECT Nominal FROM DISKON WHERE Id = %s
+                    SELECT Potongan FROM DISKON WHERE Id = %s
                     """,
                     (diskon_id,)
                 )
