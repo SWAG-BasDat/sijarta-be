@@ -962,7 +962,34 @@ def get_status_pekerjaan(pekerja_id):
     except Exception as e:
         return jsonify({'error': f"Gagal mendapatkan status pekerjaan: {str(e)}"}), 500
 
+@app.route('/api/status-pemesanan/<uuid:pekerja_id>/<uuid:pesanan_id>', methods=['PUT'])
+def update_status_pemesanan(pekerja_id, pesanan_id):
+    """
+    Endpoint untuk memperbarui status pekerjaan berdasarkan tindakan tombol.
+    """
+    try:
+        # Ambil parameter 'button_action' dari body permintaan
+        data = request.get_json()
+        button_action = data.get('button_action')
 
+        if button_action is None:
+            return jsonify({"error": "Parameter 'button_action' tidak ditemukan."}), 400
+
+        services = get_services()
+        statuspekerjaan_service = services.get('statuspekerjaanjasa')
+
+        if not statuspekerjaan_service:
+            raise Exception("Service 'statuspekerjaanjasa' tidak ditemukan.")
+
+        # Panggil fungsi update_status_pemesanan dari service
+        result = statuspekerjaan_service.update_status_pemesanan(
+            pekerja_id, pesanan_id, button_action
+        )
+
+        return jsonify(result), 200
+
+    except Exception as e:
+        return jsonify({"error": f"Gagal memperbarui status pekerjaan: {str(e)}"}), 500
 
 if __name__ == '__main__':
     app.run(port=5001)  
