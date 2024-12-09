@@ -27,7 +27,8 @@ class SubkategoriJasaService:
                     'id': result[0],
                     'nama_subkategori': result[1],
                     'deskripsi': result[2],
-                    'nama_kategori': result[3]
+                    'id_kategori': result[3],
+                    'nama_kategori': result[4]
                 }
         except Exception as e:
             self.conn.rollback()
