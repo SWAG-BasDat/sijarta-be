@@ -599,11 +599,11 @@ def get_subkategori_by_id(id_subkategori):
             'error': str(e)
         }), 500
 
-@app.route('/api/subkategorijasa/workers/<uuid:id_subkategori>', methods=['GET'])
-def get_workers_by_subkategori(id_subkategori):
+@app.route('/api/subkategorijasa/workers/<uuid:id_kategori>', methods=['GET'])
+def get_workers_by_kategori(id_kategori):
     try:
         subkategori_service = get_services()['subkategorijasa']
-        workers = subkategori_service.get_pekerja_by_subkategori(id_subkategori)
+        workers = subkategori_service.get_pekerja_by_subkategori(id_kategori)
         
         return jsonify({
             'status': 'success',
