@@ -601,11 +601,11 @@ def get_subkategori_by_id(id_subkategori):
             'error': str(e)
         }), 500
 
-@app.route('/api/subkategorijasa/workers/<uuid:id_subkategori>', methods=['GET'])
-def get_workers_by_subkategori(id_subkategori):
+@app.route('/api/subkategorijasa/workers/<uuid:id_kategori>', methods=['GET'])
+def get_workers_by_kategori(id_kategori):
     try:
         subkategori_service = get_services()['subkategorijasa']
-        workers = subkategori_service.get_pekerja_by_subkategori(id_subkategori)
+        workers = subkategori_service.get_pekerja_by_subkategori(id_kategori)
         
         return jsonify({
             'status': 'success',
@@ -742,6 +742,30 @@ def get_user(user_id):
     try:
         services = get_services()
         user = services['user'].get_user(str(user_id))
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        return jsonify(user.to_dict())
+    except Exception as e:
+        logger.error(f"Get user failed: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+    
+@app.route('/api/workers/<uuid:user_id>', methods=['GET'])
+def get_pekerja(user_id):
+    try:
+        services = get_services()
+        user = services['pekerja'].get_pekerja(str(user_id))
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        return jsonify(user.to_dict())
+    except Exception as e:
+        logger.error(f"Get user failed: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+    
+@app.route('/api/customers/<uuid:user_id>', methods=['GET'])
+def get_pelanggan(user_id):
+    try:
+        services = get_services()
+        user = services['pelanggan'].get_pelanggan(str(user_id))
         if not user:
             return jsonify({'error': 'User not found'}), 404
         return jsonify(user.to_dict())
