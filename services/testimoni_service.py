@@ -14,14 +14,15 @@ class TestimoniService:
                     t.Teks as teks,
                     t.Rating as rating,
                     u.Nama as nama_pelanggan,
-                    kj.Nama as nama_jasa
+                    kj.NamaKategori as nama_jasa
                 FROM TESTIMONI t
                 JOIN TR_PEMESANAN_JASA tj ON t.IdTrPemesanan = tj.Id
+                JOIN SUBKATEGORI_JASA sj ON tj.IdKategoriJasa = sj.Id
+                JOIN KATEGORI_JASA kj ON sj.KategoriJasaId = kj.Id
                 JOIN PELANGGAN p ON tj.IdPelanggan = p.Id
                 JOIN "USER" u ON p.Id = u.Id
-                JOIN KATEGORI_JASA kj ON tj.IdKategoriJasa = kj.Id
-                WHERE tj.IdKategoriJasa = %s
-                ORDER BY t.Tgl DESC, tj.TglPemesanan DESC
+                WHERE sj.Id = %s
+                ORDER BY t.Tgl DESC
             """, (id_subkategori,))
             testimonis = cur.fetchall()
             return [dict(t) for t in testimonis]
