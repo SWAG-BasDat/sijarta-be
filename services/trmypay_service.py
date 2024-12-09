@@ -2,10 +2,11 @@ from datetime import datetime
 from uuid import uuid4
 from models.trmypay import TrMyPay
 from services.kategoritrmypay_service import KategoriTrMyPayService
+from psycopg2.extras import DictCursor
 
 
 class TrMyPayService:
-    def _init_(self, conn):
+    def __init__(self, conn):
         self.conn = conn
         self.kategori_service = KategoriTrMyPayService(conn)
 
@@ -206,7 +207,7 @@ class TrMyPayService:
             raise Exception(f"Error saat mengambil data form transaksi: {str(e)}")
 
         
-    #read mypay
+    # read mypay
     def get_mypay_overview(self, user_id):
         """
         Mengambil informasi saldo dan riwayat transaksi pengguna berdasarkan database SIJARTA.
@@ -219,7 +220,8 @@ class TrMyPayService:
                 "riwayat_transaksi": []
             }
 
-            with self.conn.cursor() as cur:
+            with self.conn.cursor(cursor_factory=DictCursor) as cur:  # Use DictCursor
+                # Ambil saldo MyPay pengguna
                 cur.execute("""
                     SELECT SaldoMyPay
                     FROM "USER"
@@ -227,8 +229,9 @@ class TrMyPayService:
                 """, (str(user_id),))
                 saldo_row = cur.fetchone()
                 if saldo_row:
-                    result["saldo"] = saldo_row['SaldoMyPay']
+                    result["saldo"] = saldo_row["SaldoMyPay"]  # Access by column name
 
+                # Ambil riwayat transaksi pengguna
                 cur.execute("""
                     SELECT 
                         t.Nominal,
@@ -241,15 +244,14 @@ class TrMyPayService:
                 """, (str(user_id),))
                 transactions = cur.fetchall()
 
+                # Format transaksi menjadi list of dictionaries
                 for transaction in transactions:
                     result["riwayat_transaksi"].append({
-                        "nominal": transaction['Nominal'],
-                        "tanggal": transaction['Tgl'],
-                        "kategori": transaction['NamaKategori']
+                        "nominal": transaction["Nominal"],
+                        "tanggal": transaction["Tgl"],
+                        "kategori": transaction["NamaKategori"]
                     })
 
             return result
         except Exception as e:
             raise Exception(f"Error saat mengambil data MyPay: {str(e)}")
-    
-
