@@ -9,20 +9,18 @@ class PekerjaKategoriJasaService:
     def get_pesanan_tersedia(self, pekerja_id, kategori_id=None, subkategori_id=None):
         try:
             with self.conn.cursor(cursor_factory=DictCursor) as cur:
-                # Ambil kategori jasa yang dapat dilakukan oleh pekerja
                 cur.execute("""
                     SELECT kategorijasaid
                     FROM PEKERJA_KATEGORI_JASA
                     WHERE pekerjaid = %s;
                 """, (str(pekerja_id),))
                 kategori_jasa_pekerja = [row['kategorijasaid'] for row in cur.fetchall()]
-
+                print(f"Kategori jasa pekerja: {kategori_jasa_pekerja}")  
                 if not kategori_jasa_pekerja:
-                    raise Exception("Pekerja tidak memiliki kategori jasa.")
+                    return []
 
-                # Query pesanan jasa dengan join tabel status
                 query = """
-                    SELECT
+                    SELECT DISTINCT
                         tpj.id AS pesananid,
                         tpj.tglpemesanan,
                         tpj.totalbiaya,
@@ -30,33 +28,33 @@ class PekerjaKategoriJasaService:
                         skj.namasubkategori,
                         usr.nama AS namapelanggan
                     FROM TR_PEMESANAN_JASA tpj
-                    JOIN SESI_LAYANAN sl ON tpj.idkategorijasa = sl.subkategoriid
-                    JOIN SUBKATEGORI_JASA skj ON sl.subkategoriid = skj.id
+                    JOIN SESI_LAYANAN sl ON tpj.IdKategoriJasa = sl.SubkategoriId 
+                        AND tpj.Sesi = sl.Sesi
+                    JOIN SUBKATEGORI_JASA skj ON sl.SubkategoriId = skj.id
                     JOIN PELANGGAN pel ON tpj.idpelanggan = pel.id
                     JOIN "USER" usr ON pel.id = usr.id
                     JOIN TR_PEMESANAN_STATUS tps ON tpj.id = tps.idtrpemesanan
                     JOIN STATUS_PESANAN sp ON tps.idstatus = sp.id
-                    WHERE sl.subkategoriid IN %s
+                    WHERE skj.kategorijasaid IN %s
                     AND sp.status = 'Mencari pekerja terdekat'
                 """
                 params = [tuple(kategori_jasa_pekerja)]
 
-                # Filter berdasarkan kategori jasa jika diberikan
                 if kategori_id:
                     query += " AND skj.kategorijasaid = %s"
                     params.append(str(kategori_id))
 
-                # Filter berdasarkan subkategori jasa jika diberikan
                 if subkategori_id:
                     query += " AND skj.id = %s"
                     params.append(str(subkategori_id))
 
-                query += " ORDER BY tpj.tglpemesanan ASC;"
-
+                print(f"Executing query: {query}")  
+                print(f"With params: {params}")     
+                
                 cur.execute(query, params)
                 pesanan = cur.fetchall()
+                print(f"Found {len(pesanan)} orders")  
 
-                # Format hasil query menjadi list of dictionaries
                 return [
                     {
                         "pesanan_id": row["pesananid"],
@@ -70,7 +68,32 @@ class PekerjaKategoriJasaService:
                 ]
 
         except Exception as e:
+            print(f"Error in get_pesanan_tersedia: {str(e)}")  
             raise Exception(f"Error saat mendapatkan pesanan tersedia: {str(e)}")
+
+    def get_subkategori_jasa(self, kategori_id):
+        try:
+            with self.conn.cursor(cursor_factory=DictCursor) as cur:
+                print(f"Getting subkategori for kategori_id: {kategori_id}")
+                
+                cur.execute("""
+                    SELECT id, namasubkategori, deskripsi
+                    FROM SUBKATEGORI_JASA
+                    WHERE kategorijasaid = %s
+                    ORDER BY namasubkategori;
+                """, (str(kategori_id),))
+                
+                result = cur.fetchall()
+                print(f"Found {len(result)} subkategories")
+                
+                return [{
+                    "id": row["id"],
+                    "nama": row["namasubkategori"],
+                    "deskripsi": row["deskripsi"]
+                } for row in result]
+        except Exception as e:
+            print(f"Error in get_subkategori_jasa: {str(e)}")
+            raise Exception(f"Error saat mendapatkan subkategori jasa: {str(e)}")
         
     def get_kategori_jasa(self, pekerja_id):
         try:
@@ -84,19 +107,6 @@ class PekerjaKategoriJasaService:
                 return [{"id": row["id"], "nama": row["namakategori"]} for row in cur.fetchall()]
         except Exception as e:
             raise Exception(f"Error saat mendapatkan kategori jasa: {str(e)}")
-
-    def get_subkategori_jasa(self, kategori_id):
-        try:
-            with self.conn.cursor(cursor_factory=DictCursor) as cur:
-                cur.execute("""
-                    SELECT id, namasubkategori
-                    FROM SUBKATEGORI_JASA
-                    WHERE kategorijasaid = %s;
-                """, (str(kategori_id),))
-                return [{"id": row["id"], "nama": row["namasubkategori"]} for row in cur.fetchall()]
-        except Exception as e:
-            raise Exception(f"Error saat mendapatkan subkategori jasa: {str(e)}")
-        
         
     #update belum fix
     def ambil_pesanan(self, pekerja_id, pesanan_id):
@@ -169,3 +179,4 @@ class PekerjaKategoriJasaService:
         except Exception as e:
             self.conn.rollback()
             raise Exception(f"Error saat mengambil pesanan: {str(e)}")
+
