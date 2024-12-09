@@ -223,33 +223,33 @@ class TrMyPayService:
             with self.conn.cursor(cursor_factory=DictCursor) as cur:  # Use DictCursor
                 # Ambil saldo MyPay pengguna
                 cur.execute("""
-                    SELECT SaldoMyPay
+                    SELECT saldomypay
                     FROM "USER"
-                    WHERE Id = %s;
+                    WHERE id = %s;
                 """, (str(user_id),))
                 saldo_row = cur.fetchone()
                 if saldo_row:
-                    result["saldo"] = saldo_row["SaldoMyPay"]  # Access by column name
+                    result["saldo"] = saldo_row["saldomypay"]  # Access by column name
 
                 # Ambil riwayat transaksi pengguna
                 cur.execute("""
                     SELECT 
-                        t.Nominal,
-                        t.Tgl,
-                        kt.NamaKategori
+                        t.nominal,
+                        t.tgl,
+                        kt.namakategori
                     FROM TR_MYPAY t
-                    JOIN KATEGORI_TR_MYPAY kt ON t.KategoriId = kt.Id
-                    WHERE t.UserId = %s
-                    ORDER BY t.Tgl DESC;
+                    JOIN KATEGORI_TR_MYPAY kt ON t.Kategoriid = kt.id
+                    WHERE t.userid = %s
+                    ORDER BY t.tgl DESC;
                 """, (str(user_id),))
                 transactions = cur.fetchall()
 
                 # Format transaksi menjadi list of dictionaries
                 for transaction in transactions:
                     result["riwayat_transaksi"].append({
-                        "nominal": transaction["Nominal"],
-                        "tanggal": transaction["Tgl"],
-                        "kategori": transaction["NamaKategori"]
+                        "nominal": transaction["nominal"],
+                        "tanggal": transaction["tgl"],
+                        "kategori": transaction["namakategori"]
                     })
 
             return result
