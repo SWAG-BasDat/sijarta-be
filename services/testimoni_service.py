@@ -9,7 +9,7 @@ class TestimoniService:
         with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute("""
                 SELECT 
-                    t.id_tr_pemesanan,
+                    t.idtrpemesanan,
                     t.tgl,
                     t.teks,
                     t.rating,
@@ -17,7 +17,7 @@ class TestimoniService:
                     tj.nama_jasa,
                     tj.tanggal_pesanan
                 FROM testimoni t
-                JOIN tr_pemesanan_jasa tj ON t.id_tr_pemesanan = tj.id
+                JOIN tr_pemesanan_jasa tj ON t.idtrpemesanan = tj.id
                 JOIN pelanggan p ON tj.id_pelanggan = p.id
                 WHERE tj.id_sub_kategori = %s
                 ORDER BY t.tgl DESC, tj.tanggal_pesanan DESC
