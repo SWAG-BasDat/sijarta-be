@@ -1,6 +1,7 @@
 import datetime
 from decimal import Decimal
 import decimal
+import json
 import os
 import sys
 import logging
@@ -20,7 +21,13 @@ from services.kategoritrmypay_service import KategoriTrMyPayService
 from services.pemesananjasa_service import PemesananJasaService
 from services.pekerjakategorijasa_service import PekerjaKategoriJasaService
 from services.statuspekerjaanjasa_service import StatusPekerjaanJasaService
+from services.pekerja_service import PekerjaService
+from services.pelanggan_service import PelangganService
 from werkzeug.middleware.proxy_fix import ProxyFix
+from flask_cors import CORS
+from triggers.voucher_triggers import install_voucher_triggers
+from triggers.user_triggers import install_user_triggers
+
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -36,17 +43,19 @@ if os.path.exists('.env'):
     load_dotenv()
 
 app = Flask(__name__)
+CORS(app, resources={
+    r"/*": {
+        "origins": ["http://localhost:3000"],  
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"],
+        "supports_credentials": True
+    }
+})
+
 app.wsgi_app = ProxyFix(
     app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1
 )
-
-@app.after_request
-def after_request(response):
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE')
-    return response
-
+CORS(app)
 DATABASE_URL = os.getenv('DATABASE_URL', os.getenv('DATABASE_PUBLIC_URL'))
 
 def get_db():
@@ -54,6 +63,17 @@ def get_db():
         try:
             g.db = psycopg2.connect(DATABASE_URL)
             logger.debug("Created new database connection")
+            try:
+                install_voucher_triggers(g.db)
+                logger.info("Voucher triggers installed successfully")
+            except Exception as e:
+                logger.error(f"Failed to install voucher triggers: {e}", exc_info=True)     
+
+            try:
+                install_user_triggers(g.db)
+                logger.info("User triggers installed successfully")
+            except Exception as e:
+                logger.error(f"Failed to install user triggers: {e}", exc_info=True)
         except Exception as e:
             logger.error(f"Failed to create database connection: {e}", exc_info=True)
             raise
@@ -76,6 +96,8 @@ def get_services():
             'pemesananjasa': PemesananJasaService(db),
             'pekerjakategorijasa': PekerjaKategoriJasaService(db),
             'statuspekerjaanjasa': StatusPekerjaanJasaService(db)
+            'pekerja': PekerjaService(db),
+            'pelanggan': PelangganService(db)
         }
         logger.debug("Created new service instances")
     return g.services
@@ -131,6 +153,17 @@ def health_check():
             'status': 'unhealthy',
             'error': str(e)
         }), 500
+
+@app.cli.command('install-triggers')
+def install_triggers_command():
+    try:
+        db = get_db()
+        install_voucher_triggers(db)
+        install_user_triggers(db)
+        logger.info("Sukses")
+    except Exception as e:
+        logger.error(f"Gbs: {e}", exc_info=True)
+        raise
     
 @app.route('/')
 def home():
@@ -265,19 +298,20 @@ def purchase_voucher():
         data = request.json
         if not data:
             return jsonify({'error': 'No data provided'}), 400
-
-        required_fields = ['user_id', 'kode_voucher', 'metode_bayar_id']
+        
+        required_fields = ['user_id', 'kode_voucher']
         for field in required_fields:
             if field not in data:
                 return jsonify({'error': f'Missing required field: {field}'}), 400
-
+                
         services = get_services()
         result = services['voucher'].purchase_voucher(
             data['user_id'],
-            data['kode_voucher'],
-            data['metode_bayar_id']
+            data['kode_voucher']
         )
-        return jsonify(result), 201
+        
+        return json.dumps(result, cls=json.JSONEncoder), 201, {'Content-Type': 'application/json'}
+        
     except ValueError as e:
         return jsonify({'error': str(e)}), 400
     except Exception as e:
@@ -593,28 +627,22 @@ def get_workers_by_subkategori(id_subkategori):
             'message': 'Failed to fetch workers',
             'error': str(e)
         }), 500
+    
 
-@app.route('/api/sesilayanan/details/<uuid:id_subkategori>/<sesi>', methods=['GET'])
-def get_sesi_details(id_subkategori, sesi):
+@app.route('/api/sesilayanan/<uuid:id_subkategori>', methods=['GET'])
+def get_sesi_by_subkategori(id_subkategori):
     try:
-        # Fetch session details for the subcategory and session using get_services()
         sesi_service = get_services()['sesilayanan']
-        session_details = sesi_service.get_sesi_details(id_subkategori, sesi)
-
-        if not session_details:
-            return jsonify({'message': 'Session not found'}), 404
-
-        # Prepare response data
-        response_data = {
-            'session': session_details[0],  # Sesi
-            'price': session_details[1],    # Harga
-        }
-
-        return jsonify(response_data)
-
+        session_subcategory = sesi_service.get_sesi_by_subkategori(id_subkategori)
+        
+        if not session_subcategory:
+            return jsonify({"error": "No sessions found for this subcategory."}), 404
+        
+        sesi_list = [{"session": sesi[0], "price": sesi[1]} for sesi in session_subcategory]
+        return jsonify({"data": sesi_list}), 200
+        
     except Exception as e:
-        logger.error(f"Error fetching session details: {e}", exc_info=True)
-        return jsonify({'error': 'Failed to fetch session details'}), 500
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/sesilayanan/add', methods=['POST'])
 def add_sesi_layanan():
