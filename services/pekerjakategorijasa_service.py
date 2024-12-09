@@ -108,73 +108,64 @@ class PekerjaKategoriJasaService:
         except Exception as e:
             raise Exception(f"Error saat mendapatkan kategori jasa: {str(e)}")
         
-    #update belum fix
     def ambil_pesanan(self, pekerja_id, pesanan_id):
-        """
-        Mengambil pesanan oleh pekerja.
-        :param pekerja_id: UUID pekerja.
-        :param pesanan_id: UUID pesanan jasa.
-        :return: Pesan sukses.
-        """
         try:
-            with self.conn.cursor() as cur:
-                # Validasi status pesanan saat ini adalah 'Mencari pekerja terdekat'
+            with self.conn.cursor(cursor_factory=DictCursor) as cur:
                 cur.execute("""
-                    SELECT MAX(ps.IdStatus) AS IdStatus, pj.Sesi, pj.TglPemesanan
-                    FROM TR_PEMESANAN_JASA pj
-                    JOIN TR_PEMESANAN_STATUS ps ON pj.Id = ps.IdTrPemesanan
-                    WHERE pj.Id = %s
-                    GROUP BY pj.Id, pj.Sesi, pj.TglPemesanan;
+                    SELECT tps.IdStatus, tps.TglWaktu, pj.Sesi
+                    FROM TR_PEMESANAN_STATUS tps
+                    JOIN TR_PEMESANAN_JASA pj ON tps.IdTrPemesanan = pj.Id
+                    WHERE tps.IdTrPemesanan = %s
+                    ORDER BY tps.TglWaktu DESC
+                    LIMIT 1;
                 """, (str(pesanan_id),))
-                pesanan = cur.fetchone()
+                current_status = cur.fetchone()
 
-                if not pesanan:
+                if not current_status:
                     raise Exception("Pesanan tidak ditemukan.")
 
-                # Ambil ID status 'Mencari pekerja terdekat'
                 cur.execute("""
-                    SELECT Id 
+                    SELECT Id, Status 
                     FROM STATUS_PESANAN 
-                    WHERE Status = 'Mencari pekerja terdekat';
+                    WHERE Status IN ('Mencari pekerja terdekat', 'Menunggu pekerja berangkat');
                 """)
-                id_status_mencari = cur.fetchone()['id']
+                status_rows = cur.fetchall()
+                status_dict = {row['status']: row['id'] for row in status_rows}
 
-                # Pastikan statusnya adalah 'Mencari pekerja terdekat'
-                if pesanan["idstatus"] != id_status_mencari:
+                if current_status['idstatus'] != status_dict['Mencari pekerja terdekat']:
                     raise Exception("Pesanan tidak tersedia untuk diambil.")
 
-                # Hitung tanggal pekerjaan dan waktu selesai
-                sesi = pesanan["sesi"]
                 tanggal_mulai = datetime.now().date()
-                tanggal_selesai = tanggal_mulai + timedelta(days=sesi)
+                tanggal_selesai = tanggal_mulai + timedelta(days=current_status['sesi'])
 
-                # Ambil ID status 'Menunggu pekerja berangkat'
                 cur.execute("""
-                    SELECT Id 
-                    FROM STATUS_PESANAN 
-                    WHERE Status = 'Menunggu pekerja berangkat';
-                """)
-                id_status_menunggu = cur.fetchone()['id']
+                    INSERT INTO TR_PEMESANAN_STATUS (IdTrPemesanan, IdStatus, TglWaktu)
+                    VALUES (%s, %s, %s);
+                """, (
+                    str(pesanan_id),
+                    status_dict['Menunggu pekerja berangkat'],
+                    datetime.now()
+                ))
 
-                # Update status di TR_PEMESANAN_STATUS
-                cur.execute("""
-                    UPDATE TR_PEMESANAN_STATUS
-                    SET IdStatus = %s, TglWaktu = %s
-                    WHERE IdTrPemesanan = %s
-                    AND IdStatus = %s;
-                """, (id_status_menunggu, datetime.now(), str(pesanan_id), id_status_mencari))
-
-                # Update TR_PEMESANAN_JASA untuk menambahkan pekerja dan jadwal pekerjaan
                 cur.execute("""
                     UPDATE TR_PEMESANAN_JASA
                     SET IdPekerja = %s,
                         TglPekerjaan = %s,
                         WaktuPekerjaan = %s
                     WHERE Id = %s;
-                """, (str(pekerja_id), tanggal_mulai, tanggal_selesai, str(pesanan_id)))
+                """, (
+                    str(pekerja_id),
+                    tanggal_mulai,
+                    tanggal_selesai,
+                    str(pesanan_id)
+                ))
 
                 self.conn.commit()
-                return {"message": "Pesanan berhasil diambil dan status diubah menjadi 'Menunggu pekerja berangkat'."}
+                return {
+                    "message": "Pesanan berhasil diambil dan status diubah menjadi 'Menunggu pekerja berangkat'.",
+                    "tanggal_mulai": tanggal_mulai.isoformat(),
+                    "tanggal_selesai": tanggal_selesai.isoformat()
+                }
 
         except Exception as e:
             self.conn.rollback()
