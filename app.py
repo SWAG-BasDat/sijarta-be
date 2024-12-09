@@ -696,7 +696,9 @@ def get_all_users():
     try:
         services = get_services()
         users = services['user'].get_all_users()
-        return jsonify(users)
+
+        users_dict = [user.to_dict() for user in users]
+        return jsonify(users_dict)
     except Exception as e:
         logger.error(f"Get all users failed: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
@@ -708,7 +710,7 @@ def get_user(user_id):
         user = services['user'].get_user(str(user_id))
         if not user:
             return jsonify({'error': 'User not found'}), 404
-        return jsonify(user)
+        return jsonify(user.to_dict())
     except Exception as e:
         logger.error(f"Get user failed: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
@@ -736,7 +738,11 @@ def update_user(user_id):
             data.get('link_foto'),
             data.get('level')
         )
-        return jsonify({'message': 'User updated successfully'})
+        updated_user = services['user'].get_user(user_id)
+        return jsonify({
+            'message': 'User updated successfully',
+            'user': updated_user.to_dict()
+        }), 200
     except Exception as e:
         logger.error(f"Update user failed: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 400

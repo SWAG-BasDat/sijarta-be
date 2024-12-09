@@ -90,3 +90,15 @@ class User:
                 );
             """)
             conn.commit()
+    
+    def to_dict(self):
+        return {
+            'id': str(self.id),
+            'nama': self.nama,
+            'jenis_kelamin': self.jenis_kelamin,
+            'no_hp': self.no_hp,
+            'tgl_lahir': self.tgl_lahir.isoformat() if self.tgl_lahir else None,
+            'alamat': self.alamat,
+            'saldo_mypay': self.saldo_mypay,
+            'is_pekerja': self.is_pekerja,
+        }
