@@ -534,77 +534,59 @@ def search_subkategori():
 @app.route('/api/subkategorijasa/<uuid:id_subkategori>', methods=['GET'])
 def get_subkategori_by_id(id_subkategori):
     try:
-        # Fetch subkategori by ID using get_services()
         subkategori_service = get_services()['subkategorijasa']
         subkategori = subkategori_service.get_subkategori_by_id(id_subkategori)
-
+        
         if not subkategori:
-            return jsonify({'message': 'Subcategory not found'}), 404
+            return jsonify({
+                'status': 'error',
+                'message': 'Subcategory not found'
+            }), 404
 
-        # Prepare response data
-        response_data = {
-            'id': subkategori[0],
-            'name': subkategori[1],  # NamaSubkategori
-            'description': subkategori[2],  # Deskripsi
-            'category': subkategori[3]  # NamaKategori
-        }
-
-        return jsonify(response_data)
+        return jsonify({
+            'status': 'success',
+            'data': {
+                'id': subkategori['id'],
+                'name': subkategori['nama_subkategori'],
+                'description': subkategori['deskripsi'],
+                'category': subkategori['nama_kategori']
+            }
+        })
 
     except Exception as e:
         logger.error(f"Error fetching subcategory: {e}", exc_info=True)
-        return jsonify({'error': 'Failed to fetch subcategory'}), 500
+        return jsonify({
+            'status': 'error',
+            'message': 'Failed to fetch subcategory',
+            'error': str(e)
+        }), 500
 
 @app.route('/api/subkategorijasa/workers/<uuid:id_subkategori>', methods=['GET'])
 def get_workers_by_subkategori(id_subkategori):
     try:
-        # Fetch workers by subcategory ID using get_services()
         subkategori_service = get_services()['subkategorijasa']
         workers = subkategori_service.get_pekerja_by_subkategori(id_subkategori)
-
-        if not workers:
-            return jsonify({'message': 'No workers found for this subcategory'}), 404
-
-        # Prepare response data
-        response_data = [
-            {
-                'id': worker[0],
-                'name': worker[1],  # Nama
-                'rating': worker[2],  # Rating
-                'completed_orders': worker[3]  # JmlPsnananSelesai
-            }
-            for worker in workers
-        ]
-
-        return jsonify(response_data)
+        
+        return jsonify({
+            'status': 'success',
+            'data': [
+                {
+                    'id': worker['id'],
+                    'name': worker['nama'],
+                    'rating': worker['rating'],
+                    'completed_orders': worker['jumlah_pesanan_selesai']
+                }
+                for worker in workers
+            ]
+        })
 
     except Exception as e:
         logger.error(f"Error fetching workers: {e}", exc_info=True)
-        return jsonify({'error': 'Failed to fetch workers'}), 500
-
-@app.route('/api/sesilayanan/<uuid:id_subkategori>', methods=['GET'])
-def get_sesi_layanan_by_subkategori(id_subkategori):
-    try:
-        # Fetch all sessions for this subcategory using get_services()
-        sesi_service = get_services()['sesilayanan']
-        sessions = sesi_service.get_sesi_by_subkategori(id_subkategori)
-        
-        if not sessions:
-            return jsonify({'message': 'No sessions found for this subcategory'}), 404
-
-        # Prepare response data
-        response_data = [
-            {
-                'session': session[0],  # Sesi
-                'price': session[1],     # Harga
-            } for session in sessions
-        ]
-        
-        return jsonify(response_data)
-
-    except Exception as e:
-        logger.error(f"Error fetching sessions: {e}", exc_info=True)
-        return jsonify({'error': 'Failed to fetch sessions'}), 500
+        return jsonify({
+            'status': 'error',
+            'message': 'Failed to fetch workers',
+            'error': str(e)
+        }), 500
 
 @app.route('/api/sesilayanan/details/<uuid:id_subkategori>/<sesi>', methods=['GET'])
 def get_sesi_details(id_subkategori, sesi):
@@ -818,4 +800,3 @@ def create_transaction(user_id):
     except Exception as e:
         logger.error(f"Error creating transaction: {e}")
         return jsonify({'error': str(e)}), 500
-
