@@ -721,7 +721,7 @@ def get_user(user_id):
         if not user:
             return jsonify({'error': 'User not found'}), 404
         if user.is_pekerja:
-            pekerja = services['pekerja'].get_pekerja_by_user_id(str(user_id))
+            pekerja = services['pekerja'].get_pekerja(str(user_id))
             return jsonify({
                 'user': user.to_dict(),
                 'nama_bank': pekerja.nama_bank,
