@@ -20,6 +20,7 @@ from services.trmypay_service import TrMyPayService
 from services.kategoritrmypay_service import KategoriTrMyPayService
 from services.pemesananjasa_service import PemesananJasaService
 from services.pekerjakategorijasa_service import PekerjaKategoriJasaService
+from services.statuspekerjaanjasa_service import StatusPekerjaanJasaService
 from services.pekerja_service import PekerjaService
 from services.pelanggan_service import PelangganService
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -94,6 +95,7 @@ def get_services():
             'kategoritrmypay': KategoriTrMyPayService(db),
             'pemesananjasa': PemesananJasaService(db),
             'pekerjakategorijasa': PekerjaKategoriJasaService(db),
+            'statuspekerjaanjasa': StatusPekerjaanJasaService(db)
             'pekerja': PekerjaService(db),
             'pelanggan': PelangganService(db)
         }
