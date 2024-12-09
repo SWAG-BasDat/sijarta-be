@@ -804,21 +804,15 @@ def update_user(user_id):
     
 @app.route('/api/mypay/<uuid:user_id>', methods=['GET'])
 def get_mypay(user_id):
-    """
-    Endpoint untuk mengambil data MyPay pengguna.
-    """
     try:
-        # Ambil service MyPay dari services
         services = get_services()
         trmypay_service = services.get('trmypay')
 
         if not trmypay_service:
             raise Exception("Service 'trmypay' tidak ditemukan.")
 
-        # Ambil data MyPay berdasarkan user_id
         mypay_data = trmypay_service.get_mypay_overview(user_id)
 
-        # Kembalikan hasil dalam format JSON
         return jsonify({
             'no_hp': mypay_data.get('no_hp', ""),
             'saldo': mypay_data.get('saldo', 0),
@@ -969,6 +963,26 @@ def update_pesanan(pekerja_id, pesanan_id):
         return jsonify(result), 200
     except Exception as e:
         return jsonify({'error': f"Gagal memperbarui pesanan: {str(e)}"}), 500
+    
+
+@app.route('/api/status-pekerjaan/<uuid:pekerja_id>', methods=['GET'])
+def get_status_pekerjaan(pekerja_id):
+    try:
+        services = get_services()
+        statuspekerjaan_service = services.get('statuspekerjaanjasa')
+
+        if not statuspekerjaan_service:
+            raise Exception("Service 'statuspekerjaanjasa' tidak ditemukan.")
+
+        nama_jasa = request.args.get('nama_jasa', None)
+        status = request.args.get('status', None)
+
+        pekerjaan = statuspekerjaan_service.get_status_pekerjaan(pekerja_id, nama_jasa, status)
+
+        return jsonify({"status_pekerjaan": pekerjaan}), 200
+    except Exception as e:
+        return jsonify({'error': f"Gagal mendapatkan status pekerjaan: {str(e)}"}), 500
+
 
 
 if __name__ == '__main__':
