@@ -895,23 +895,19 @@ def get_pekerjaan_jasa(pekerja_id):
     try:
         services = get_services()
         pekerja_service = services.get('pekerjakategorijasa')
-
         if not pekerja_service:
             raise Exception("Service 'pekerjakategorijasa' tidak ditemukan.")
 
-        # Parameter kategori_id dan subkategori_id dari query string
-        kategori_id = request.args.get('kategori_id')
+        kategori_jasa = pekerja_service.get_kategori_jasa(pekerja_id)
+        
+
+        kategori_id = request.args.get('kategori_id') or (kategori_jasa[0]['id'] if kategori_jasa else None)
         subkategori_id = request.args.get('subkategori_id')
 
-        # Ambil daftar pesanan yang tersedia
         pesanan_tersedia = pekerja_service.get_pesanan_tersedia(
             pekerja_id, kategori_id, subkategori_id
         )
 
-        # Ambil daftar kategori jasa yang bisa dilakukan oleh pekerja
-        kategori_jasa = pekerja_service.get_kategori_jasa(pekerja_id)
-
-        # Jika kategori_id dipilih, ambil subkategori terkait
         subkategori_jasa = []
         if kategori_id:
             subkategori_jasa = pekerja_service.get_subkategori_jasa(kategori_id)
@@ -921,6 +917,8 @@ def get_pekerjaan_jasa(pekerja_id):
             'subkategori_jasa': subkategori_jasa,
             'pesanan_tersedia': pesanan_tersedia
         }), 200
-
     except Exception as e:
         return jsonify({'error': f"Gagal mengambil data pekerjaan jasa: {str(e)}"}), 500
+
+if __name__ == '__main__':
+    app.run(port=5001)  
