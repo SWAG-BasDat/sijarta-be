@@ -1,5 +1,5 @@
 from datetime import date
-from models.user import User, hash_password, verify_password
+from models.user import User
 
 class UserService:
     def __init__(self, conn):
@@ -10,8 +10,6 @@ class UserService:
         if not all([nama, jenis_kelamin, no_hp, pwd, tgl_lahir, alamat, is_pekerja]):
             raise ValueError("All required parameters must be provided")
 
-        hashed_pwd = hash_password(pwd)
-
         try:
             with self.conn.cursor() as cur:
                 # Insert user
@@ -19,7 +17,7 @@ class UserService:
                     INSERT INTO "USER" (Id, Nama, JenisKelamin, NoHP, Pwd, TglLahir, Alamat, SaldoMyPay, IsPekerja)
                     VALUES (uuid_generate_v4(), %s, %s, %s, %s, %s, %s, 0, %s)
                     RETURNING id
-                """, (nama, jenis_kelamin, no_hp, hashed_pwd, tgl_lahir, alamat, is_pekerja))
+                """, (nama, jenis_kelamin, no_hp, pwd, tgl_lahir, alamat, is_pekerja))
                 user_id = cur.fetchone()[0]
 
                 if is_pekerja:
@@ -96,7 +94,7 @@ class UserService:
                         UPDATE "USER" SET NoHP = %s WHERE Id = %s
                     """, (no_hp, user_id))
                 if pwd:
-                    hashed_pwd = hash_password(pwd)
+                    hashed_pwd = pwd
                     cur.execute("""
                         UPDATE "USER" SET Pwd = %s WHERE Id = %s
                     """, (hashed_pwd, user_id))
@@ -141,11 +139,12 @@ class UserService:
 
     def login(self, no_hp, pwd):
         user = self.get_user_by_no_hp(no_hp)
+        stored_password = user.pwd
 
         if not user:
             return None
 
-        if verify_password(user.pwd, pwd) == True:
+        if stored_password == pwd:
             return user.id
 
         return None
