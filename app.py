@@ -20,6 +20,7 @@ from services.kategoritrmypay_service import KategoriTrMyPayService
 from services.pemesananjasa_service import PemesananJasaService
 from services.pekerjakategorijasa_service import PekerjaKategoriJasaService
 from services.pekerja_service import PekerjaService
+from services.pelanggan_service import PelangganService
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 logging.basicConfig(
@@ -75,7 +76,8 @@ def get_services():
             'kategoritrmypay': KategoriTrMyPayService(db),
             'pemesananjasa': PemesananJasaService(db),
             'pekerjakategorijasa': PekerjaKategoriJasaService(db),
-            'pekerja': PekerjaService(db)
+            'pekerja': PekerjaService(db),
+            'pelanggan': PelangganService(db)
         }
         logger.debug("Created new service instances")
     return g.services
@@ -727,10 +729,10 @@ def get_user(user_id):
                 'jml_pesanan_selesai': pekerja.jml_pesanan_selesai
             })
         else:
-            pembeli = services['user'].get_user(str(user_id))
+            pelanggan = services['pelanggan'].get_pelanggan(str(user_id))
             return jsonify({
                 'user': user.to_dict(),
-                'level': pembeli.level
+                'level': pelanggan.level
             })
     except Exception as e:
         logger.error(f"Get user failed: {e}", exc_info=True)
