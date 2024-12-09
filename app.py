@@ -1,6 +1,7 @@
 import datetime
 from decimal import Decimal
 import decimal
+import json
 import os
 import sys
 import logging
@@ -23,6 +24,7 @@ from services.pekerja_service import PekerjaService
 from services.pelanggan_service import PelangganService
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_cors import CORS
+
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -281,7 +283,8 @@ def purchase_voucher():
             data['user_id'],
             data['kode_voucher']
         )
-        return jsonify(result), 201
+        
+        return json.dumps(result, cls=json.JSONEncoder), 201, {'Content-Type': 'application/json'}
         
     except ValueError as e:
         return jsonify({'error': str(e)}), 400
