@@ -721,22 +721,7 @@ def get_user(user_id):
         user = services['user'].get_user(str(user_id))
         if not user:
             return jsonify({'error': 'User not found'}), 404
-        if user.is_pekerja:
-            pekerja = services['pekerja'].get_pekerja_by_user_id(str(user_id))
-            return jsonify({
-                'user': user.to_dict(),
-                'nama_bank': pekerja.nama_bank,
-                'nomor_rekening': pekerja.nomor_rekening,
-                'npwp': pekerja.npwp,
-                'link_foto': pekerja.link_foto,
-                'jml_pesanan_selesai': pekerja.jml_pesanan_selesai
-            })
-        else:
-            pelanggan = services['pelanggan'].get_pelanggan(str(user_id))
-            return jsonify({
-                'user': user.to_dict(),
-                'level': pelanggan.level
-            })
+        return jsonify(user.to_dict())
     except Exception as e:
         logger.error(f"Get user failed: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
