@@ -1,5 +1,5 @@
 from datetime import date
-from models.user import User
+from models.pelanggan import Pelanggan
 
 class PelangganService:
     def __init__(self, conn):
@@ -15,14 +15,14 @@ class PelangganService:
             if not pelanggan:
                 return None
         
-            return User(*pelanggan)
+            return Pelanggan(*pelanggan)
         
     def get_all_pelanggan(self):
         with self.conn.cursor() as cur:
             cur.execute("""
                 SELECT * FROM PELANGGAN
             """)
-            return [User(*pelanggan) for pelanggan in cur.fetchall()]
+            return [Pelanggan(*pelanggan) for pelanggan in cur.fetchall()]
         
     def get_pelanggan_by_no_hp(self, no_hp):
         with self.conn.cursor() as cur:
@@ -37,4 +37,4 @@ class PelangganService:
             if not pelanggan:
                 return None
         
-            return User(*pelanggan)
+            return Pelanggan(*pelanggan)
