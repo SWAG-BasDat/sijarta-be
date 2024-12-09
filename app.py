@@ -24,6 +24,8 @@ from services.pekerja_service import PekerjaService
 from services.pelanggan_service import PelangganService
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_cors import CORS
+from triggers.voucher_triggers import install_voucher_triggers
+from triggers.user_triggers import install_user_triggers
 
 
 logging.basicConfig(
@@ -42,7 +44,7 @@ if os.path.exists('.env'):
 app = Flask(__name__)
 CORS(app, resources={
     r"/*": {
-        "origins": ["http://localhost:3000"],  # Add other allowed origins as needed
+        "origins": ["http://localhost:3000"],  
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization"],
         "supports_credentials": True
@@ -60,6 +62,17 @@ def get_db():
         try:
             g.db = psycopg2.connect(DATABASE_URL)
             logger.debug("Created new database connection")
+            try:
+                install_voucher_triggers(g.db)
+                logger.info("Voucher triggers installed successfully")
+            except Exception as e:
+                logger.error(f"Failed to install voucher triggers: {e}", exc_info=True)     
+
+            try:
+                install_user_triggers(g.db)
+                logger.info("User triggers installed successfully")
+            except Exception as e:
+                logger.error(f"Failed to install user triggers: {e}", exc_info=True)
         except Exception as e:
             logger.error(f"Failed to create database connection: {e}", exc_info=True)
             raise
@@ -138,6 +151,17 @@ def health_check():
             'status': 'unhealthy',
             'error': str(e)
         }), 500
+
+@app.cli.command('install-triggers')
+def install_triggers_command():
+    try:
+        db = get_db()
+        install_voucher_triggers(db)
+        install_user_triggers(db)
+        logger.info("Sukses")
+    except Exception as e:
+        logger.error(f"Gbs: {e}", exc_info=True)
+        raise
     
 @app.route('/')
 def home():
@@ -601,6 +625,23 @@ def get_workers_by_subkategori(id_subkategori):
             'message': 'Failed to fetch workers',
             'error': str(e)
         }), 500
+    
+@app.route('/api/sesilayanan/<uuid:id_subkategori>', methods=['GET'])
+def get_sesi_by_subkategori(self, id_subkategori):
+    try:
+        # Fetch session details for the subcategory and session using get_services()
+        sesi_service = get_services()['sesilayanan']
+        session_subcategory = sesi_service.get_sesi_details(id_subkategori)
+
+        if not session_subcategory:
+            return jsonify({"error": "No sessions found for this subcategory."}), 404
+        
+        # Format the data into a list of dictionaries
+        sesi_list = [{"session": sesi[0], "price": sesi[1]} for sesi in session_subcategory]
+        return jsonify({"data": sesi_list}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/sesilayanan/details/<uuid:id_subkategori>/<sesi>', methods=['GET'])
 def get_sesi_details(id_subkategori, sesi):
