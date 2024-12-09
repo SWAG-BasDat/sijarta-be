@@ -765,6 +765,7 @@ def get_mypay(user_id):
 
         # Kembalikan hasil dalam format JSON
         return jsonify({
+            'no_hp': mypay_data.get('no_hp', ""),
             'saldo': mypay_data.get('saldo', 0),
             'riwayat_transaksi': mypay_data.get('riwayat_transaksi', [])
         }), 200

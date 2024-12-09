@@ -216,6 +216,7 @@ class TrMyPayService:
         """
         try:
             result = {
+                "no_hp": "",
                 "saldo": 0,
                 "riwayat_transaksi": []
             }
@@ -223,13 +224,14 @@ class TrMyPayService:
             with self.conn.cursor(cursor_factory=DictCursor) as cur:  # Use DictCursor
                 # Ambil saldo MyPay pengguna
                 cur.execute("""
-                    SELECT saldomypay
+                    SELECT nohp, saldomypay
                     FROM "USER"
                     WHERE id = %s;
                 """, (str(user_id),))
-                saldo_row = cur.fetchone()
-                if saldo_row:
-                    result["saldo"] = saldo_row["saldomypay"]  # Access by column name
+                user_row = cur.fetchone()
+                if user_row:
+                    result["no_hp"] = user_row["nohp"]
+                    result["saldo"] = user_row["saldomypay"]  # Access by column name
 
                 # Ambil riwayat transaksi pengguna
                 cur.execute("""
