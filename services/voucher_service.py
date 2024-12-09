@@ -28,7 +28,7 @@ class VoucherService:
             """, (kode,))
             return cur.fetchone()
 
-    def purchase_voucher(self, user_id, kode_voucher, metode_bayar_id):
+    def purchase_voucher(self, user_id, kode_voucher):
         try:
             with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute("""
@@ -49,43 +49,36 @@ class VoucherService:
                 if voucher['kuotapenggunaan'] <= 0:
                     raise ValueError("Voucher sudah habis")
 
+
+                if Decimal(pelanggan['saldomypay']) < Decimal(voucher['harga']):
+                    raise ValueError("Saldo MyPay tidak mencukupi")
+
                 cur.execute("""
-                    SELECT Id, Nama FROM METODE_BAYAR WHERE Id = %s
-                """, (metode_bayar_id,))
-                metode_bayar = cur.fetchone()
-                if not metode_bayar:
-                    raise ValueError("Metode pembayaran tidak valid")
-
-                if metode_bayar['nama'].upper() == 'MYPAY':
-                    if Decimal(pelanggan['saldomypay']) < Decimal(voucher['harga']):
-                        raise ValueError("Saldo MyPay tidak mencukupi")
-
+                    SELECT Id FROM KATEGORI_TR_MYPAY 
+                    WHERE NamaKategori = 'Pembelian Voucher'
+                """)
+                kategori = cur.fetchone()
+                if not kategori:
+                    kategori_id = uuid4()
                     cur.execute("""
-                        SELECT Id FROM KATEGORI_TR_MYPAY 
-                        WHERE NamaKategori = 'Pembelian Voucher'
-                    """)
+                        INSERT INTO KATEGORI_TR_MYPAY (Id, NamaKategori)
+                        VALUES (%s, 'Pembelian Voucher')
+                        RETURNING Id
+                    """, (kategori_id,))
                     kategori = cur.fetchone()
-                    if not kategori:
-                        kategori_id = uuid4()
-                        cur.execute("""
-                            INSERT INTO KATEGORI_TR_MYPAY (Id, NamaKategori)
-                            VALUES (%s, 'Pembelian Voucher')
-                            RETURNING Id
-                        """, (kategori_id,))
-                        kategori = cur.fetchone()
 
-                    mypay_id = uuid4()
-                    cur.execute("""
-                        INSERT INTO TR_MYPAY (Id, UserId, Tgl, Nominal, KategoriId, Keterangan)
-                        VALUES (%s, %s, CURRENT_DATE, %s, %s, %s)
-                    """, (mypay_id, user_id, -voucher['harga'], kategori['id'], kode_voucher))
+                mypay_id = uuid4()
+                cur.execute("""
+                    INSERT INTO TR_MYPAY (Id, UserId, Tgl, Nominal, KategoriId, Keterangan)
+                    VALUES (%s, %s, CURRENT_DATE, %s, %s, %s)
+                """, (mypay_id, user_id, -voucher['harga'], kategori['id'], kode_voucher))
 
-                    new_balance = Decimal(pelanggan['saldomypay']) - Decimal(voucher['harga'])
-                    cur.execute("""
-                        UPDATE "USER"
-                        SET SaldoMyPay = %s
-                        WHERE Id = %s
-                    """, (new_balance, user_id))
+                new_balance = Decimal(pelanggan['saldomypay']) - Decimal(voucher['harga'])
+                cur.execute("""
+                    UPDATE "USER"
+                    SET SaldoMyPay = %s
+                    WHERE Id = %s
+                """, (new_balance, user_id))
 
                 tgl_awal = date.today()
                 tgl_akhir = tgl_awal + timedelta(days=voucher['jmlhariberlaku'])
@@ -93,9 +86,9 @@ class VoucherService:
                 purchase_id = uuid4()
                 cur.execute("""
                     INSERT INTO TR_PEMBELIAN_VOUCHER 
-                    (Id, TglAwal, TglAkhir, TelahDigunakan, IdPelanggan, IdVoucher, IdMetodeBayar)
-                    VALUES (%s, %s, %s, 0, %s, %s, %s)
-                """, (purchase_id, tgl_awal, tgl_akhir, user_id, kode_voucher, metode_bayar_id))
+                    (Id, TglAwal, TglAkhir, TelahDigunakan, IdPelanggan, IdVoucher)
+                    VALUES (%s, %s, %s, 0, %s, %s)
+                """, (purchase_id, tgl_awal, tgl_akhir, user_id, kode_voucher))
 
                 cur.execute("""
                     UPDATE VOUCHER
@@ -105,32 +98,26 @@ class VoucherService:
 
                 self.conn.commit()
 
-                response_data = {
+                return {
                     "status": "success",
                     "message": "Voucher berhasil dibeli",
                     "data": {
                         "purchase_id": purchase_id,
                         "kode_voucher": kode_voucher,
                         "tgl_awal": tgl_awal,
-                        "tgl_akhir": tgl_akhir
-                    }
-                }
-
-                if metode_bayar['nama'].upper() == 'MYPAY':
-                    response_data["data"].update({
+                        "tgl_akhir": tgl_akhir,
                         "nama_user": pelanggan['nama'],
                         "harga": float(voucher['harga']),
                         "saldo_tersisa": float(new_balance)
-                    })
-
-                return response_data
-
+                    }
+                }
         except ValueError as e:
             self.conn.rollback()
             raise ValueError(str(e))
         except Exception as e:
             self.conn.rollback()
             raise Exception(f"Error sistem: {str(e)}")
+        
 
     def get_user_vouchers(self, user_id):
         with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
