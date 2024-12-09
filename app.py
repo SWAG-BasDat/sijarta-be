@@ -626,44 +626,21 @@ def get_workers_by_subkategori(id_subkategori):
             'error': str(e)
         }), 500
     
-@app.route('/api/sesilayanan/<uuid:id_subkategori>', methods=['GET'])
-def get_sesi_by_subkategori(self, id_subkategori):
-    try:
-        # Fetch session details for the subcategory and session using get_services()
-        sesi_service = get_services()['sesilayanan']
-        session_subcategory = sesi_service.get_sesi_details(id_subkategori)
 
+@app.route('/api/sesilayanan/<uuid:id_subkategori>', methods=['GET'])
+def get_sesi_by_subkategori(id_subkategori):
+    try:
+        sesi_service = get_services()['sesilayanan']
+        session_subcategory = sesi_service.get_sesi_by_subkategori(id_subkategori)
+        
         if not session_subcategory:
             return jsonify({"error": "No sessions found for this subcategory."}), 404
         
-        # Format the data into a list of dictionaries
         sesi_list = [{"session": sesi[0], "price": sesi[1]} for sesi in session_subcategory]
         return jsonify({"data": sesi_list}), 200
-
+        
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-@app.route('/api/sesilayanan/details/<uuid:id_subkategori>/<sesi>', methods=['GET'])
-def get_sesi_details(id_subkategori, sesi):
-    try:
-        # Fetch session details for the subcategory and session using get_services()
-        sesi_service = get_services()['sesilayanan']
-        session_details = sesi_service.get_sesi_details(id_subkategori, sesi)
-
-        if not session_details:
-            return jsonify({'message': 'Session not found'}), 404
-
-        # Prepare response data
-        response_data = {
-            'session': session_details[0],  # Sesi
-            'price': session_details[1],    # Harga
-        }
-
-        return jsonify(response_data)
-
-    except Exception as e:
-        logger.error(f"Error fetching session details: {e}", exc_info=True)
-        return jsonify({'error': 'Failed to fetch session details'}), 500
 
 @app.route('/api/sesilayanan/add', methods=['POST'])
 def add_sesi_layanan():
