@@ -33,7 +33,7 @@ class SubkategoriJasaService:
             self.conn.rollback()
             raise Exception(f"Database error in get_subkategori_by_id: {str(e)}")
 
-    def get_pekerja_by_subkategori(self, id_subkategori):
+    def get_pekerja_by_subkategori(self, id_kategori):
         """
         Get workers for a subcategory with proper error handling.
         """
@@ -45,14 +45,14 @@ class SubkategoriJasaService:
                         p.Id, 
                         u.Nama, 
                         COALESCE(p.Rating, 0) as Rating, 
-                        COALESCE(p.JmlPsnananSelesai, 0) as JmlPsnananSelesai
+                        COALESCE(p.JmlPesananSelesai, 0) as JmlPesananSelesai
                     FROM PEKERJA p
                     JOIN "USER" u ON p.Id = u.Id
                     JOIN PEKERJA_KATEGORI_JASA pkj ON p.Id = pkj.PekerjaId
                     WHERE pkj.KategoriJasaId = %s
                     ORDER BY p.Rating DESC NULLS LAST
                     """,
-                    (str(id_subkategori),)  
+                    (str(id_kategori),)  
                 )
                 results = cur.fetchall()
                 
