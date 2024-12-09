@@ -22,6 +22,7 @@ from services.pekerjakategorijasa_service import PekerjaKategoriJasaService
 from services.pekerja_service import PekerjaService
 from services.pelanggan_service import PelangganService
 from werkzeug.middleware.proxy_fix import ProxyFix
+from flask_cors import CORS
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -40,6 +41,7 @@ app = Flask(__name__)
 app.wsgi_app = ProxyFix(
     app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1
 )
+CORS(app)
 
 @app.after_request
 def after_request(response):
