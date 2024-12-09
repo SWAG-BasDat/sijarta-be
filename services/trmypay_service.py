@@ -183,20 +183,23 @@ class TrMyPayService:
             with self.conn.cursor() as cur:
                 # Ambil data user
                 cur.execute("""
-                    SELECT Nama, SaldoMyPay 
+                    SELECT nama, saldomypay 
                     FROM "USER" 
-                    WHERE Id = %s;
+                    WHERE id = %s;
                 """, (user_id,))
                 user = cur.fetchone()
 
                 if not user:
                     raise Exception(f"User dengan ID {user_id} tidak ditemukan.")
 
-                result["nama_user"] = user['Nama']
-                result["saldo"] = user['SaldoMyPay']
+                result["nama_user"] = user['nama']
+                result["saldo"] = user['saldomypay']
 
-                # Ambil semua kategori transaksi
-                result["kategori_transaksi"] = self.kategori_service.get_all_kategori()
+                # Ambil hanya kategori transaksi tertentu
+                kategori_transaksi = self.kategori_service.get_selected_kategori()
+                result["kategori_transaksi"] = [
+                    {"id": kategori[0], "nama_kategori": kategori[1]} for kategori in kategori_transaksi
+                ]
 
                 # Tambahkan tanggal transaksi (tanggal saat ini)
                 result["tanggal_transaksi"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
