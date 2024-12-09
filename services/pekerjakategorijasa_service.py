@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from uuid import UUID
-
+from psycopg2.extras import DictCursor
 
 class PekerjaKategoriJasaService:
     def __init__(self, conn):
@@ -8,7 +8,7 @@ class PekerjaKategoriJasaService:
 
     def get_pesanan_tersedia(self, pekerja_id, kategori_id=None, subkategori_id=None):
         try:
-            with self.conn.cursor() as cur:
+            with self.conn.cursor(cursor_factory=DictCursor) as cur:
                 # Ambil kategori jasa yang dapat dilakukan oleh pekerja
                 cur.execute("""
                     SELECT kategorijasaid
@@ -74,7 +74,7 @@ class PekerjaKategoriJasaService:
         
     def get_kategori_jasa(self, pekerja_id):
         try:
-            with self.conn.cursor() as cur:
+            with self.conn.cursor(cursor_factory=DictCursor) as cur:
                 cur.execute("""
                     SELECT kj.id, kj.namakategori
                     FROM PEKERJA_KATEGORI_JASA pkj
@@ -87,7 +87,7 @@ class PekerjaKategoriJasaService:
 
     def get_subkategori_jasa(self, kategori_id):
         try:
-            with self.conn.cursor() as cur:
+            with self.conn.cursor(cursor_factory=DictCursor) as cur:
                 cur.execute("""
                     SELECT id, namasubkategori
                     FROM SUBKATEGORI_JASA
