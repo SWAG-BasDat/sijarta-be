@@ -168,7 +168,7 @@ class TrMyPayService:
         
     def get_transaction_form(self, user_id):
         """
-        Mengambil data form transaksi MyPay (nama user, saldo, kategori transaksi, tanggal transaksi)
+        Mengambil data form transaksi MyPay (nama user, saldo, kategori transaksi tertentu, tanggal transaksi).
         :param user_id: ID user yang akan melakukan transaksi.
         :return: Dictionary berisi data form transaksi.
         """
@@ -180,25 +180,26 @@ class TrMyPayService:
                 "tanggal_transaksi": None
             }
 
-            with self.conn.cursor() as cur:
+            with self.conn.cursor(cursor_factory=DictCursor) as cur:  # Gunakan DictCursor
                 # Ambil data user
                 cur.execute("""
                     SELECT nama, saldomypay 
                     FROM "USER" 
                     WHERE id = %s;
-                """, (user_id,))
+                """, (str(user_id),))
                 user = cur.fetchone()
 
                 if not user:
                     raise Exception(f"User dengan ID {user_id} tidak ditemukan.")
 
-                result["nama_user"] = user['nama']
-                result["saldo"] = user['saldomypay']
+                result["nama_user"] = user["nama"]  # Mengakses dengan nama kolom
+                result["saldo"] = user["saldomypay"]  # Mengakses dengan nama kolom
 
                 # Ambil hanya kategori transaksi tertentu
                 kategori_transaksi = self.kategori_service.get_selected_kategori()
                 result["kategori_transaksi"] = [
-                    {"id": kategori[0], "nama_kategori": kategori[1]} for kategori in kategori_transaksi
+                    {"id": kategori["id"], "nama_kategori": kategori["namakategori"]}
+                    for kategori in kategori_transaksi
                 ]
 
                 # Tambahkan tanggal transaksi (tanggal saat ini)
